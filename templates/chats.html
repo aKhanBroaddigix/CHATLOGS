@@ -17,7 +17,15 @@
 </head>
 <body>
     <div class="container my-5">
-        <h1 class="text-center mb-4" color:white>All Chats for {{ username }}</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>All Chats for {{ username }}</h1>
+            <!-- Date Filter Form -->
+            <form action="{{ url_for('get_chats') }}" method="POST" class="d-flex align-items-center">
+                <input type="hidden" name="username" value="{{ username }}">
+                <input type="date" name="selected_date" id="selected_date" class="form-control me-2" value="{{ selected_date|default('') }}">
+                <button type="submit" class="btn btn-primary">Filter</button>
+            </form>
+        </div>
         
         {% if user_found %}
             {% for chat in chats %}
@@ -29,12 +37,29 @@
                     </div>
                 </div>
             {% endfor %}
+
+            <!-- Pagination Controls -->
+            <div class="text-center mt-4">
+                <div class="d-flex justify-content-between">
+                    {% if has_previous %}
+                        <a href="{{ url_for('get_chats', username=username, page=page-1, selected_date=selected_date) }}" class="btn btn-secondary">Previous</a>
+                    {% else %}
+                        <span></span> <!-- Placeholder to keep buttons aligned -->
+                    {% endif %}
+                    
+                    {% if has_next %}
+                        <a href="{{ url_for('get_chats', username=username, page=page+1, selected_date=selected_date) }}" class="btn btn-primary">Next</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Download Button -->
             <div class="text-center mt-4">
                 <a href="{{ url_for('download_chats', username=username) }}" class="btn btn-primary">Download Chat as CSV</a>
             </div>
         {% else %}
             <div class="alert alert-warning text-center">
-                No chats found for username: <strong>{{ username }}</strong>
+                No chats found for username: <strong>{{ username }}</strong> on {{ selected_date|default('this date') }}.
             </div>
         {% endif %}
         
@@ -42,5 +67,12 @@
             <a href="/" class="btn btn-secondary">Search Again</a>
         </div>
     </div>
+
+    <script>
+        // Add click listener to open the date picker when the input is clicked
+        document.getElementById("selected_date").addEventListener("click", function() {
+            this.showPicker();  // Opens the date picker on click
+        });
+    </script>
 </body>
 </html>
