@@ -198,7 +198,7 @@ def weekly_chat_volume():
     weekly_data = list(messages_collection.aggregate(pipeline))
     return jsonify(weekly_data)
 
-# Route for top chat contributors data
+
 @app.route("/api/top_chat_contributors", methods=["GET"])
 def top_chat_contributors():
     if not session.get("logged_in"):
