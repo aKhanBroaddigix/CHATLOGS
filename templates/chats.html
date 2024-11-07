@@ -6,6 +6,7 @@
     <title>Chats for {{ username }}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='title_img.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
     <style>
         body {
             background: url("{{ url_for('static', filename='fernwood_bg.jpg') }}") no-repeat center center fixed;
@@ -20,7 +21,7 @@
         .card {
             border-color: #c71585;
             background-color: rgba(255, 255, 255, 0.8);
-            cursor: pointer; /* Adds a pointer cursor to indicate the card is clickable */
+            cursor: pointer;
         }
         .btn-primary {
             background-color: #c71585;
@@ -55,17 +56,25 @@
             display: inline-block;
             padding-left: 5px;
         }
-    </style>
+   </style>
 </head>
 <body>
     <div class="container my-5">
         <h1>All Chats for {{ username }}</h1>
 
-        <!-- Date Filter Form positioned below the title -->
+        <!-- Date Range Filter Form -->
         <div class="filter-container">
             <form action="{{ url_for('get_chats') }}" method="POST" class="d-flex align-items-center">
                 <input type="hidden" name="username" value="{{ username }}">
-                <input type="date" name="selected_date" id="selected_date" class="form-control me-2" value="{{ selected_date|default('') }}" placeholder="Select Date">
+                
+                <!-- Start Date Input with Placeholder -->
+
+                
+                <input type="text" name="start_date" id="start_date" class="form-control me-2" value="{{ start_date }}" autocomplete="off">
+                
+                <!-- End Date Input with Placeholder -->
+                <input type="text" name="end_date" id="end_date" class="form-control me-2" value="{{ end_date }}" autocomplete="off">
+                
                 <button type="submit" class="btn btn-primary">Filter</button>
             </form>
         </div>
@@ -89,13 +98,13 @@
             <div class="text-center mt-4">
                 <div class="d-flex justify-content-between">
                     {% if has_previous %}
-                        <a href="{{ url_for('get_chats', username=username, page=page-1, selected_date=selected_date) }}" class="btn btn-secondary">Previous</a>
+                        <a href="{{ url_for('get_chats', username=username, page=page-1, start_date=start_date, end_date=end_date) }}" class="btn btn-secondary">Previous</a>
                     {% else %}
-                        <span></span> <!-- Placeholder to keep buttons aligned -->
+                        <span></span>
                     {% endif %}
                     
                     {% if has_next %}
-                        <a href="{{ url_for('get_chats', username=username, page=page+1, selected_date=selected_date) }}" class="btn btn-primary">Next</a>
+                        <a href="{{ url_for('get_chats', username=username, page=page+1, start_date=start_date, end_date=end_date) }}" class="btn btn-primary">Next</a>
                     {% endif %}
                 </div>
             </div>
@@ -106,7 +115,7 @@
             </div>
         {% else %}
             <div class="alert alert-warning text-center">
-                No chats found for username: <strong>{{ username }}</strong> on {{ selected_date|default('this date') }}.
+                No chats found for username: <strong>{{ username }}</strong> in the selected date range.
             </div>
         {% endif %}
         
@@ -115,10 +124,29 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        // Add click listener to open the date picker when the input is clicked
-        document.getElementById("selected_date").addEventListener("click", function() {
-            this.showPicker();  // Opens the date picker on click
+        // Initialize Flatpickr for start date
+        flatpickr("#start_date", {
+            dateFormat: "Y-m-d",
+            maxDate: "today", // Disable future dates
+            //placeholder: "Select Start Date", // Ensures placeholder is visible
+            onChange: function(selectedDates, dateStr) {
+                // Set minDate of end_date based on start_date selection
+                flatpickr("#end_date", {
+                    dateFormat: "Y-m-d",
+                    minDate: dateStr, // Prevent selecting end date before start date
+                    maxDate: "today",  // Disable future dates
+                   // placeholder: "Select End Date" // Ensures placeholder is visible
+                });
+            }
+        });
+
+        // Initialize Flatpickr for end date with a maximum date of today
+        flatpickr("#end_date", {
+            dateFormat: "Y-m-d",
+            maxDate: "today", // Disable future dates
+            placeholder: "Select End Date" // Ensures placeholder is visible
         });
 
         // Toggle function for See More / See Less

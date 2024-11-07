@@ -48,50 +48,56 @@ def home():
     return render_template("index.html")
 
 # Route to retrieve all data and display results
+# Route to retrieve all data and display results
 @app.route("/get-chats", methods=["POST", "GET"])
 def get_chats():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
-    # Retrieve the username and page from the form (POST) or URL parameters (GET)
+    # Retrieve the username, page, and date range from the form (POST) or URL parameters (GET)
     if request.method == "POST":
-        username = request.form.get("username").strip()
+        username = request.form.get("username", "").strip()
         page = 1
-        selected_date = request.form.get("selected_date")
+        start_date = request.form.get("start_date") or "Start Date"
+        end_date = request.form.get("end_date") or "End Date"
     else:
         username = request.args.get("username", "").strip()
         page = int(request.args.get("page", 1))
-        selected_date = request.args.get("selected_date")
+        start_date = request.args.get("start_date") or "Start Date"
+        end_date = request.args.get("end_date") or "End Date"
 
-    print(f"Searching for user '{username}' on page {page} with date '{selected_date}'")  # Debugging output
+    print(f"Searching for user '{username}' on page {page} with date range '{start_date}' to '{end_date}'")  # Debugging output
 
     # Pagination setup
     items_per_page = 10
     skip_items = (page - 1) * items_per_page
 
-    # Construct query criteria based on username and optional date
+    # Construct query criteria based on username
     criteria = {"chats.username": username}
 
-    # If a date is selected, add it to the filter
-    if selected_date:
-        # Parse the selected_date and define the range for the whole day
-        start_date = datetime.strptime(selected_date, "%Y-%m-%d")
-        end_date = start_date + timedelta(days=1)
-        criteria["timestamp"] = {"$gte": start_date, "$lt": end_date}
+    # Apply date range filter only if actual dates (not placeholders) are provided
+    if start_date != "Start Date" and end_date != "End Date":
+        try:
+            # Parse the start and end dates
+            start_date_parsed = datetime.strptime(start_date, "%Y-%m-%d")
+            end_date_parsed = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)  # Include the end date fully
+            criteria["timestamp"] = {"$gte": start_date_parsed, "$lt": end_date_parsed}
+        except ValueError:
+            flash("Invalid date format. Please use YYYY-MM-DD.")
+            return redirect(url_for("get_chats"))
 
-    # Retrieve paginated chat data for the specific user and date (if provided)
+    # Retrieve paginated chat data for the specific user and date range (if provided)
     all_documents = list(
         messages_collection.find(criteria).sort("timestamp", -1).skip(skip_items).limit(items_per_page)
     )
     print(f"Total documents retrieved for user '{username}' on page {page}: {len(all_documents)}")  # Debugging output
 
-    # Filter data by username and format the chats
+    # Process data to format the chats
     chats = []
     for document in all_documents:
         try:
             chats_data = document.get("chats", {})
             chat_id = chats_data.get("id", "N/A")
-
             questions = chats_data.get("questions", [])
             if isinstance(questions, str):
                 questions = [questions]
@@ -105,7 +111,6 @@ def get_chats():
                 sanitized_answer = (
                     message.get("content", "No answer available") if isinstance(message, dict) else "No answer available"
                 )
-
                 chat_data = {
                     "chat_id": chat_id,
                     "question": sanitized_question,
@@ -123,7 +128,6 @@ def get_chats():
     has_next = page * items_per_page < total_chats
     has_previous = page > 1
 
-    # Pass selected_date to template to keep the date picker value
     return render_template(
         "chats.html",
         username=username,
@@ -132,8 +136,10 @@ def get_chats():
         page=page,
         has_next=has_next,
         has_previous=has_previous,
-        selected_date=selected_date
+        start_date=start_date,
+        end_date=end_date
     )
+
 
 
 # Route to download chat data as CSV
