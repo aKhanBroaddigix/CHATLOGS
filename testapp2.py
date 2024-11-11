@@ -183,7 +183,7 @@ def download_chats(username):
 
     return send_file(output, mimetype="text/csv", as_attachment=True, download_name=f"{username}_chats.csv")
 
-# Route for weekly chat volume data
+# Route for weekly chat volume data updatrion
 @app.route("/api/weekly_chat_volume", methods=["GET"])
 def weekly_chat_volume():
     if not session.get("logged_in"):
