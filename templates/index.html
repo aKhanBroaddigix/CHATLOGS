@@ -8,17 +8,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { 
-            background: url("{{ url_for('static', filename='fernwood_bg.jpg') }}") no-repeat center center fixed; 
-            background-size: cover; 
-            color: #333; 
-            font-family: Arial, sans-serif; 
+        body {
+            background: url("{{ url_for('static', filename='fernwood_bg.jpg') }}") no-repeat center center fixed;
+            background-size: cover;
+            color: #333;
+            font-family: Arial, sans-serif;
         }
         h1, h3 { color: #ffffff; }
-        .card { 
-            border-color: #c71585; 
-            background-color: rgba(255, 255, 255, 0.8); 
-            padding: 20px; 
+        .card {
+            border-color: #c71585;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -27,7 +27,6 @@
         .btn-primary { background-color: #c71585; border: none; }
         .btn-primary:hover { background-color: #a5146d; }
         .form-label { font-weight: bold; }
-        
         .chart-container {
             display: flex;
             justify-content: space-around;
@@ -36,20 +35,63 @@
         }
         .chart-box {
             width: 100%;
-            height: 350px; /* Fixed height for chart cards */
+            height: 350px;
             margin: 15px;
-        }
-        .dashboard-container {
-            margin-top: 20px;
         }
         .card canvas {
             width: 100% !important;
             height: 100% !important;
             padding-bottom: 20px;
         }
-        .adjusting{
-            padding-bottom: 15px;
+        .update{
+            margin-top: 41px !important;;
         }
+        #username-suggestions {
+            z-index: 1000;
+            display: none;
+        }
+        /* Responsive styles for the user list */
+        #user-list {
+        width: 100%;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 0;
+    }
+
+    #user-list .list-group-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: nowrap; /* Prevent items from wrapping */
+        padding: 10px 15px;
+        font-size: 0.95rem;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        margin-bottom: 5px;
+        border-radius: 8px;
+        transition: all 0.2s ease-in-out;
+    }
+
+    #user-list .list-group-item:hover {
+        background-color: rgba(199, 21, 133, 0.1);
+        cursor: pointer;
+    }
+
+    #user-list .list-group-item span:first-child {
+        font-weight: 500;
+        color: #333;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap; /* Prevent text overflow */
+    }
+
+    #user-list .badge {
+        flex-shrink: 0;
+        background-color: #c71585 !important;
+        color: #fff;
+        font-size: 0.8rem;
+        padding: 5px 10px;
+        border-radius: 12px;
+    }
     </style>
 </head>
 <body>
@@ -59,13 +101,13 @@
                 <h1 class="text-center mb-4">Dashboard</h1>
                 
                 <div class="chart-container">
-                    <!-- Weekly Chat Volume Chart in its own card -->
+                    <!-- Weekly Chat Volume Chart -->
                     <div class="card chart-box">
                         <h3 class="text-center" style="color: #c71585; padding-top: 1rem;">Weekly Chat Volume</h3>
                         <canvas id="weeklyChatVolumeChart"></canvas>
                     </div>
 
-                    <!-- Top Chat Contributors Chart in its own card (Circular) -->
+                    <!-- Top Chat Contributors Chart -->
                     <div class="card chart-box">
                         <h3 class="text-center" style="color: #c71585; padding-top: 1rem;">Top Chat Contributors</h3>
                         <canvas id="topChatContributorsChart"></canvas>
@@ -73,26 +115,35 @@
                 </div>
             </div>
 
-            <!-- Right Column for Chat Retrieval Form, given less width (4 columns out of 12) -->
+            <!-- Right Column -->
             <div class="col-md-4">
-                <div>  <!-- Adjust margin-top to move it down -->
-                    <h1 class="text-center mb-4 adjusting">Chats</h1>
-                    <div class="card p-4 shadow-sm">
-                        <form action="/get-chats" method="post">
-                            <div class="mb-3">
-                                <label for="username" class="form-label">Enter Username</label>
-                                <input type="text" id="username" name="username" class="form-control" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">Retrieve Chats</button>
-                        </form>
-                    </div>
+                <h1 class="text-center mb-4">Chats</h1>
+                
+                <!-- Retrieve Chats Card -->
+                <div class="card p-4 shadow-sm update">
+                    <form action="/get-chats" method="post">
+                        <div class="mb-3 position-relative">
+                            <label for="username" class="form-label">Enter Username</label>
+                            <input type="text" id="username" name="username" class="form-control" autocomplete="off" required>
+                            <div id="username-suggestions" class="list-group position-absolute w-100"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Retrieve Chats</button>
+                    </form>
+                </div>
+
+                <!-- Users with Chat Days Card -->
+                <div class="card p-4 shadow-sm mt-4">
+                    <h3 class="text-center" style="color: #c71585;">Users with Chat Days</h3>
+                    <ul id="user-list" class="list-group">
+                        <!-- Users will be dynamically populated -->
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Fetch and render Weekly Chat Volume Chart (Bar Chart)
+        // Fetch and render Weekly Chat Volume Chart
         fetch("/api/weekly_chat_volume")
             .then(response => response.json())
             .then(data => {
@@ -112,16 +163,14 @@
                         }]
                     },
                     options: {
-                        scales: {
-                            y: { beginAtZero: true }
-                        },
                         responsive: true,
-                        maintainAspectRatio: false // Ensures chart fills the container
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } }
                     }
                 });
             });
 
-        // Fetch and render Top Chat Contributors Chart (Doughnut Chart)
+        // Fetch and render Top Chat Contributors Chart
         fetch("/api/top_chat_contributors")
             .then(response => response.json())
             .then(data => {
@@ -133,7 +182,6 @@
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: 'Number of Chats',
                             data: values,
                             backgroundColor: [
                                 'rgba(255, 99, 132, 0.9)',
@@ -143,23 +191,76 @@
                                 'rgba(153, 102, 255, 0.9)',
                                 'rgba(255, 159, 64, 0.9)'
                             ],
-                            borderColor: [
-                                'rgba(255, 99, 132, 1)',
-                                'rgba(54, 162, 235, 1)',
-                                'rgba(255, 206, 86, 1)',
-                                'rgba(75, 192, 192, 1)',
-                                'rgba(153, 102, 255, 1)',
-                                'rgba(255, 159, 64, 1)'
-                            ],
                             borderWidth: 2
                         }]
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false // Ensures chart fills the container
+                        maintainAspectRatio: false
                     }
                 });
             });
+
+        // Fetch and populate the Users with Chat Days card
+        fetch("/users-with-chats")
+            .then(response => response.json())
+            .then(data => {
+                const userList = document.getElementById("user-list");
+                userList.innerHTML = "";
+                data.forEach(user => {
+                    const li = document.createElement("li");
+                    li.className = "list-group-item d-flex justify-content-between align-items-center";
+                    li.innerHTML = `
+                        <span>${user._id}</span>
+                        <span class="badge bg-primary rounded-pill">${user.days} Days</span>
+                    `;
+                    li.onclick = () => {
+                        window.location.href = `/get-chats?username=${encodeURIComponent(user._id)}`;
+                    };
+                    userList.appendChild(li);
+                });
+            });
+
+        // Autocomplete for Username Input
+        const usernameInput = document.getElementById("username");
+        const suggestionsBox = document.getElementById("username-suggestions");
+
+        usernameInput.addEventListener("input", () => {
+            const query = usernameInput.value.trim();
+            if (query.length < 1) {
+                suggestionsBox.style.display = "none";
+                suggestionsBox.innerHTML = "";
+                return;
+            }
+
+            fetch(`/search-usernames?query=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(usernames => {
+                    suggestionsBox.innerHTML = "";
+                    if (usernames.length > 0) {
+                        suggestionsBox.style.display = "block";
+                        usernames.forEach(username => {
+                            const div = document.createElement("div");
+                            div.className = "list-group-item list-group-item-action";
+                            div.textContent = username;
+                            div.onclick = () => {
+                                usernameInput.value = username;
+                                suggestionsBox.style.display = "none";
+                            };
+                            suggestionsBox.appendChild(div);
+                        });
+                    } else {
+                        suggestionsBox.style.display = "none";
+                    }
+                });
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener("click", (e) => {
+            if (!suggestionsBox.contains(e.target) && e.target !== usernameInput) {
+                suggestionsBox.style.display = "none";
+            }
+        });
     </script>
 </body>
 </html>

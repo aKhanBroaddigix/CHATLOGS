@@ -217,6 +217,48 @@ def top_chat_contributors():
     ]
     top_contributors = list(messages_collection.aggregate(pipeline))
     return jsonify(top_contributors)
+@app.route("/users-with-chats", methods=["GET"])
+def users_with_chats():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    # MongoDB aggregation to count the number of unique days each user chatted
+    pipeline = [
+        {
+            "$match": {
+                "chats.username": {"$ne": None, "$ne": ""}  # Exclude documents where username is null
+            }
+        },
+        {
+            "$group": {
+                "_id": "$chats.username",
+                "days": {
+                    "$addToSet": {
+                        "$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}
+                    }
+                }
+            }
+        },
+        {"$project": {"_id": 1, "days": {"$size": "$days"}}},  # Count unique days
+        {"$sort": {"days": -1}}  # Sort by days in descending order
+    ]
+
+    users = list(messages_collection.aggregate(pipeline))
+
+    return jsonify(users)
+@app.route("/search-usernames", methods=["GET"])
+def search_usernames():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    query = request.args.get("query", "").strip()
+    if not query:
+        return jsonify([])
+
+    # Search for usernames starting with the query
+    results = messages_collection.distinct("chats.username", {"chats.username": {"$regex": f"^{query}", "$options": "i"}})
+    return jsonify(results)
+
 
 # Run the app
 if __name__ == "__main__":
