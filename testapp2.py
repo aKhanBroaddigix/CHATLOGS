@@ -106,6 +106,9 @@ def get_chats():
             if isinstance(messages, dict):
                 messages = [messages]
 
+            timestamp = document.get("timestamp")  # Extract the timestamp
+            formatted_date = timestamp.strftime("%d-%b-%Y %I:%M %p") if timestamp else "Unknown Date"
+
             for question, message in zip(questions, messages):
                 sanitized_question = question if isinstance(question, str) else "No question available"
                 sanitized_answer = (
@@ -114,7 +117,8 @@ def get_chats():
                 chat_data = {
                     "chat_id": chat_id,
                     "question": sanitized_question,
-                    "answer": sanitized_answer
+                    "answer": sanitized_answer,
+                    "date": formatted_date  # Include the date in the chat data
                 }
                 chats.append(chat_data)
 
@@ -139,7 +143,6 @@ def get_chats():
         start_date=start_date,
         end_date=end_date
     )
-
 
 
 # Route to download chat data as CSV

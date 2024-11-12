@@ -18,6 +18,9 @@
             color: #ffff;
             text-align: center;
         }
+        h5{
+            font-size: small;
+        }
         .card {
             border-color: #c71585;
             background-color: rgba(255, 255, 255, 0.8);
@@ -83,7 +86,7 @@
             {% for chat in chats %}
                 <div class="card mb-4 shadow-sm" onclick="toggleAnswer('{{ loop.index }}')">
                     <div class="card-body">
-                        <h5 class="card-title">Chat ID: {{ chat.chat_id }}</h5>
+                        <h5 class="card-title">Date: {{ chat.date }}</h5>
                         <p class="card-text"><strong>Question:</strong> {{ chat.question }}</p>
                         <p class="card-text">
                             <strong>Answer:</strong>
