@@ -23,14 +23,18 @@ messages_collection = db[COLLECTION_NAME]
 VALID_USERNAME = "admin"
 VALID_PASSWORD = "password123"
 
-# Route for login page
+def adjust_timestamp(timestamp):
+    """Reduce the timestamp by 1 hour."""
+    if isinstance(timestamp, datetime):
+        return timestamp - timedelta(hours=1)
+    raise ValueError("Unsupported timestamp format")
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
 
-        # Check against hardcoded credentials
         if username == VALID_USERNAME and password == VALID_PASSWORD:
             session["logged_in"] = True
             return redirect(url_for("home"))
@@ -40,21 +44,17 @@ def login():
 
     return render_template("login.html")
 
-# Home route that requires login
 @app.route("/", methods=["GET"])
 def home():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
     return render_template("index.html")
 
-# Route to retrieve all data and display results
-# Route to retrieve all data and display results
 @app.route("/get-chats", methods=["POST", "GET"])
 def get_chats():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
-    # Retrieve the username, page, and date range from the form (POST) or URL parameters (GET)
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         page = 1
@@ -66,68 +66,53 @@ def get_chats():
         start_date = request.args.get("start_date") or "Start Date"
         end_date = request.args.get("end_date") or "End Date"
 
-    print(f"Searching for user '{username}' on page {page} with date range '{start_date}' to '{end_date}'")  # Debugging output
-
-    # Pagination setup
     items_per_page = 10
     skip_items = (page - 1) * items_per_page
-
-    # Construct query criteria based on username
     criteria = {"chats.username": username}
 
-    # Apply date range filter only if actual dates (not placeholders) are provided
     if start_date != "Start Date" and end_date != "End Date":
         try:
-            # Parse the start and end dates
             start_date_parsed = datetime.strptime(start_date, "%Y-%m-%d")
-            end_date_parsed = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)  # Include the end date fully
+            end_date_parsed = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
             criteria["timestamp"] = {"$gte": start_date_parsed, "$lt": end_date_parsed}
         except ValueError:
             flash("Invalid date format. Please use YYYY-MM-DD.")
             return redirect(url_for("get_chats"))
 
-    # Retrieve paginated chat data for the specific user and date range (if provided)
     all_documents = list(
         messages_collection.find(criteria).sort("timestamp", -1).skip(skip_items).limit(items_per_page)
     )
-    print(f"Total documents retrieved for user '{username}' on page {page}: {len(all_documents)}")  # Debugging output
 
-    # Process data to format the chats
     chats = []
     for document in all_documents:
-        try:
-            chats_data = document.get("chats", {})
-            chat_id = chats_data.get("id", "N/A")
-            questions = chats_data.get("questions", [])
-            if isinstance(questions, str):
-                questions = [questions]
+        chats_data = document.get("chats", {})
+        chat_id = chats_data.get("id", "N/A")
+        questions = chats_data.get("questions", [])
+        if isinstance(questions, str):
+            questions = [questions]
 
-            messages = chats_data.get("messages", [])
-            if isinstance(messages, dict):
-                messages = [messages]
+        messages = chats_data.get("messages", [])
+        if isinstance(messages, dict):
+            messages = [messages]
 
-            timestamp = document.get("timestamp")  # Extract the timestamp
-            formatted_date = timestamp.strftime("%d-%b-%Y %I:%M %p") if timestamp else "Unknown Date"
+        timestamp = document.get("timestamp")
+        adjusted_time = adjust_timestamp(timestamp) if timestamp else None
+        formatted_date = adjusted_time.strftime("%d-%b-%Y %I:%M %p") if adjusted_time else "Unknown Date"
 
-            for question, message in zip(questions, messages):
-                sanitized_question = question if isinstance(question, str) else "No question available"
-                sanitized_answer = (
-                    message.get("content", "No answer available") if isinstance(message, dict) else "No answer available"
-                )
-                chat_data = {
-                    "chat_id": chat_id,
-                    "question": sanitized_question,
-                    "answer": sanitized_answer,
-                    "date": formatted_date  # Include the date in the chat data
-                }
-                chats.append(chat_data)
-
-        except Exception as e:
-            print(f"Error processing document with ID {document.get('_id')}: {e}")
+        for question, message in zip(questions, messages):
+            sanitized_question = question if isinstance(question, str) else "No question available"
+            sanitized_answer = (
+                message.get("content", "No answer available") if isinstance(message, dict) else "No answer available"
+            )
+            chat_data = {
+                "chat_id": chat_id,
+                "question": sanitized_question,
+                "answer": sanitized_answer,
+                "date": formatted_date
+            }
+            chats.append(chat_data)
 
     user_found = len(chats) > 0
-
-    # Determine if there are more pages
     total_chats = messages_collection.count_documents(criteria)
     has_next = page * items_per_page < total_chats
     has_previous = page > 1
@@ -144,21 +129,17 @@ def get_chats():
         end_date=end_date
     )
 
-
-# Route to download chat data as CSV
 @app.route("/download-chats/<username>", methods=["GET"])
 def download_chats(username):
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
-    # Retrieve all chat data for the specific user
     all_documents = list(messages_collection.find({"chats.username": username}))
-
     chats = []
+
     for document in all_documents:
         chats_data = document.get("chats", {})
         chat_id = chats_data.get("id", "N/A")
-
         questions = chats_data.get("questions", [])
         if isinstance(questions, str):
             questions = [questions]
@@ -167,33 +148,36 @@ def download_chats(username):
         if isinstance(messages, dict):
             messages = [messages]
 
+        timestamp = document.get("timestamp")
+        adjusted_time = adjust_timestamp(timestamp) if timestamp else None
+        formatted_date = adjusted_time.strftime("%d-%b-%Y %I:%M %p") if adjusted_time else "Unknown Date"
+
         for question, message in zip(questions, messages):
-            sanitized_question = str(question).replace('\n', ' ').replace('\r', '').strip() if isinstance(question, str) else "No question available"
-            sanitized_answer = str(message.get("content", "No answer available")).replace('\n', ' ').replace('\r', '').strip() if isinstance(message, dict) else "No answer available"
+            sanitized_question = str(question).replace('\n', ' ').replace('\r', '').strip()
+            sanitized_answer = str(message.get("content", "No answer available")).replace('\n', ' ').replace('\r', '').strip()
 
             chat_data = {
                 "username": username,
                 "question": sanitized_question,
-                "answer": sanitized_answer
+                "answer": sanitized_answer,
+                "timestamp": formatted_date
             }
             chats.append(chat_data)
 
-    # Convert chat data to CSV in binary format with proper quoting
     df = pd.DataFrame(chats)
     output = BytesIO()
-    df.to_csv(output, index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)  # Use quoting for all fields
+    df.to_csv(output, index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
     output.seek(0)
 
     return send_file(output, mimetype="text/csv", as_attachment=True, download_name=f"{username}_chats.csv")
 
-# Route for weekly chat volume data updatrion
 @app.route("/api/weekly_chat_volume", methods=["GET"])
 def weekly_chat_volume():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
     today = datetime.now()
-    start_of_week = datetime.combine(today - timedelta(days=today.weekday()), datetime.min.time())
+    start_of_week = today - timedelta(days=today.weekday())
 
     pipeline = [
         {"$match": {"timestamp": {"$gte": start_of_week}}},
@@ -205,6 +189,8 @@ def weekly_chat_volume():
     ]
 
     weekly_data = list(messages_collection.aggregate(pipeline))
+    for day in weekly_data:
+        day["_id"] = (datetime.strptime(day["_id"], "%Y-%m-%d") - timedelta(hours=1)).strftime("%Y-%m-%d")
     return jsonify(weekly_data)
 
 
@@ -225,12 +211,9 @@ def users_with_chats():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
-    # MongoDB aggregation to count the number of unique days each user chatted
     pipeline = [
         {
-            "$match": {
-                "chats.username": {"$ne": None, "$ne": ""}  # Exclude documents where username is null
-            }
+            "$match": {"chats.username": {"$ne": None, "$ne": ""}}
         },
         {
             "$group": {
@@ -242,12 +225,13 @@ def users_with_chats():
                 }
             }
         },
-        {"$project": {"_id": 1, "days": {"$size": "$days"}}},  # Count unique days
-        {"$sort": {"days": -1}}  # Sort by days in descending order
+        {"$project": {"_id": 1, "days": {"$size": "$days"}}},
+        {"$sort": {"days": -1}}
     ]
 
     users = list(messages_collection.aggregate(pipeline))
-
+    for user in users:
+        user["_id"] = str(user["_id"])
     return jsonify(users)
 @app.route("/search-usernames", methods=["GET"])
 def search_usernames():
@@ -263,6 +247,5 @@ def search_usernames():
     return jsonify(results)
 
 
-# Run the app
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8000 ,debug=True)
+    app.run(host='0.0.0.0', port=8000, debug=True)
