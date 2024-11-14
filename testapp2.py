@@ -4,6 +4,7 @@ import pandas as pd
 from io import BytesIO
 from datetime import datetime, timedelta
 import csv
+from pytz import timezone, UTC
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -23,11 +24,26 @@ messages_collection = db[COLLECTION_NAME]
 VALID_USERNAME = "admin"
 VALID_PASSWORD = "password123"
 
+MELBOURNE_TZ = timezone("Australia/Melbourne")
+
 def adjust_timestamp(timestamp):
-    """Reduce the timestamp by 1 hour."""
-    if isinstance(timestamp, datetime):
-        return timestamp - timedelta(hours=1)
-    raise ValueError("Unsupported timestamp format")
+    """Convert UTC timestamp to Melbourne time."""
+    if isinstance(timestamp, int):
+        # Convert epoch timestamp to datetime
+        utc_time = datetime.fromtimestamp(timestamp / 1000, tz=UTC)
+    elif isinstance(timestamp, datetime):
+        # Assume datetime is UTC if not timezone-aware
+        if timestamp.tzinfo is None:
+            utc_time = timestamp.replace(tzinfo=UTC)
+        else:
+            utc_time = timestamp
+    else:
+        raise ValueError("Unsupported timestamp format")
+
+    # Convert UTC time to Melbourne time
+    melbourne_time = utc_time.astimezone(MELBOURNE_TZ)
+    return melbourne_time
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -74,7 +90,10 @@ def get_chats():
         try:
             start_date_parsed = datetime.strptime(start_date, "%Y-%m-%d")
             end_date_parsed = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-            criteria["timestamp"] = {"$gte": start_date_parsed, "$lt": end_date_parsed}
+            criteria["timestamp"] = {
+                "$gte": start_date_parsed.replace(tzinfo=MELBOURNE_TZ),
+                "$lt": end_date_parsed.replace(tzinfo=MELBOURNE_TZ),
+            }
         except ValueError:
             flash("Invalid date format. Please use YYYY-MM-DD.")
             return redirect(url_for("get_chats"))
@@ -180,9 +199,9 @@ def weekly_chat_volume():
     start_of_week = today - timedelta(days=today.weekday())
 
     pipeline = [
-        {"$match": {"timestamp": {"$gte": start_of_week}}},
+        {"$match": {"timestamp": {"$gte": start_of_week.astimezone(UTC)}}},
         {"$group": {
-            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp", "timezone": "Australia/Melbourne"}},
             "count": {"$sum": 1}
         }},
         {"$sort": {"_id": 1}}
@@ -220,7 +239,7 @@ def users_with_chats():
                 "_id": "$chats.username",
                 "days": {
                     "$addToSet": {
-                        "$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}
+                        "$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp", "timezone": "Australia/Melbourne"}
                     }
                 }
             }
