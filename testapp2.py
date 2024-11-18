@@ -193,24 +193,68 @@ def download_chats(username):
 @app.route("/api/weekly_chat_volume", methods=["GET"])
 def weekly_chat_volume():
     if not session.get("logged_in"):
+        #print("[DEBUG] User is not logged in.")
         return redirect(url_for("login"))
 
-    today = datetime.now()
-    start_of_week = today - timedelta(days=today.weekday())
+    try:
+        # Get the current date and time in Melbourne timezone
+        today_melbourne = datetime.now(MELBOURNE_TZ)
+        #print(f"[DEBUG] Today (Melbourne): {today_melbourne}")
 
-    pipeline = [
-        {"$match": {"timestamp": {"$gte": start_of_week.astimezone(UTC)}}},
-        {"$group": {
-            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp", "timezone": "Australia/Melbourne"}},
-            "count": {"$sum": 1}
-        }},
-        {"$sort": {"_id": 1}}
-    ]
+        # Calculate the start of the week (Monday 12:00 AM) in Melbourne timezone
+        start_of_week_melbourne = today_melbourne - timedelta(days=today_melbourne.weekday())
+        start_of_week_melbourne = start_of_week_melbourne.replace(hour=0, minute=0, second=0, microsecond=0)
+        print(f"[DEBUG] Start of Week (Melbourne, Midnight): {start_of_week_melbourne}")
 
-    weekly_data = list(messages_collection.aggregate(pipeline))
-    for day in weekly_data:
-        day["_id"] = (datetime.strptime(day["_id"], "%Y-%m-%d") - timedelta(hours=1)).strftime("%Y-%m-%d")
-    return jsonify(weekly_data)
+        # Convert start_of_week to UTC for MongoDB filtering
+        start_of_week_utc = start_of_week_melbourne.astimezone(UTC)
+        #print(f"[DEBUG] Start of Week (UTC): {start_of_week_utc}")
+
+        # MongoDB aggregation pipeline
+        pipeline = [
+            {
+                "$match": {
+                    "timestamp": {"$gte": start_of_week_utc}
+                }
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "$dateToString": {
+                            "format": "%Y-%m-%d",
+                            "date": "$timestamp",
+                            "timezone": "Australia/Melbourne"
+                        }
+                    },
+                    "count": {"$sum": 1}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]
+        #print(f"[DEBUG] Aggregation Pipeline: {pipeline}")
+
+        # Execute the aggregation pipeline
+        weekly_data = list(messages_collection.aggregate(pipeline))
+        #print(f"[DEBUG] Aggregated Weekly Data (raw): {weekly_data}")
+
+        # Additional debugging to verify the format of the aggregated data
+        for day_data in weekly_data:
+            print(f"[DEBUG] Processed Day: {day_data['_id']}, Count: {day_data['count']}")
+
+        # Return the aggregated data as JSON
+        return jsonify(weekly_data)
+
+    except Exception as e:
+        # Log the exact error for debugging
+        print(f"[ERROR] An error occurred in /api/weekly_chat_volume: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+    except Exception as e:
+        # Log the exact error for debugging
+        print(f"[ERROR] An error occurred in /api/weekly_chat_volume: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 
 
 @app.route("/api/top_chat_contributors", methods=["GET"])
