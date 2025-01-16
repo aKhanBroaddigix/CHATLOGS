@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chats by Date and Users</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css', v=1) }}"
+    />
+
+    <style>
+      body {
+        background: url("{{ url_for('static', filename='fernwood_bg.jpg') }}")
+          no-repeat center center fixed;
+        background-size: cover;
+        color: #333;
+        font-family: Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Back Icon -->
+    <a href="/" class="back-icon" title="Go Back">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div class="container my-5">
+      <h1>Chat Logs</h1>
+
+      <div class="filter-container">
+        <form
+          id="filter-form"
+          action="/get-chats-by-date-and-users"
+          method="GET"
+          class="d-flex justify-content-end align-items-center"
+        >
+          <!-- Hidden date inputs -->
+          <input type="hidden" id="start_date" name="start_date" />
+          <input type="hidden" id="end_date" name="end_date" />
+
+          <!-- Date Filter Dropdown -->
+          <div class="d-flex align-items-center">
+            <select
+              id="date-filter"
+              name="date_filter"
+              class="form-select me-2"
+            >
+              <option value="none">Select a Date Range</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="last_week">Last Week</option>
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="custom">Custom</option>
+            </select>
+            <div id="custom-date-range" class="ms-2" style="display: none">
+              <input
+                type="text"
+                id="date-range"
+                class="form-control"
+                placeholder="Select Date Range"
+              />
+            </div>
+          </div>
+
+          <!-- Username Input -->
+          <div class="position-relative me-2" style="width: 300px">
+            <input
+              type="text"
+              name="username"
+              id="username"
+              class="form-control"
+              placeholder="Enter Username"
+              autocomplete="off"
+            />
+            <div
+              id="username-suggestions"
+              class="list-group position-absolute w-100"
+              style="z-index: 1000; display: none"
+            >
+             
+              </label>
+              <div id="suggestion-list"></div>
+            </div>
+          </div>
+
+          <!-- Filter Button -->
+          <button type="submit" class="btn btn-primary">Filter</button>
+          <button
+            id="fetch-all-chats"
+            class="btn btn-secondary"
+            style="padding: 0.65rem 1.5rem; margin: 0rem 0rem 0rem 0.5rem;display: none"
+          >
+            Fetch All Chats
+          </button>
+        </form>
+      </div>
+
+      <!-- Chat Results -->
+      {% if chats %} {% for chat in chats %}
+      <div
+        class="card mb-4 shadow-sm"
+        onclick="toggleAnswer('{{ loop.index }}')"
+      >
+        <div class="card-body">
+          <h5 class="card-title">Date: {{ chat.date }}</h5>
+          <p class="card-text">
+            <strong>Username:</strong> {{ chat.username }}
+          </p>
+          <p class="card-text">
+            <strong>Question:</strong> {{ chat.question }}
+          </p>
+          <p class="card-text">
+            <strong>Answer:</strong>
+            <span class="chat-text-preview" id="answer-{{ loop.index }}"
+              >{{ chat.answer }}</span
+            >
+            <span class="see-more-btn" id="toggle-button-{{ loop.index }}"
+              >... See More</span
+            >
+          </p>
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Pagination -->
+      <!-- Pagination -->
+      <!-- Pagination -->
+      <div class="text-center mt-4">
+        <nav aria-label="Page navigation">
+          <ul class="pagination justify-content-center">
+            <!-- Display up to 10 pages -->
+            {% for page_num in range(1, total_pages + 1) %} {% if page_num <= 10
+            %}
+            <li class="page-item {% if page_num == page %}active{% endif %}">
+              <a
+                class="page-link"
+                href="{{ url_for('get_chats_by_date_and_users', start_date=start_date, end_date=end_date, username=username, page=page_num) }}"
+              >
+                {{ page_num }}
+              </a>
+            </li>
+            {% endif %} {% endfor %}
+
+            <!-- Next button -->
+            {% if total_pages > 10 %}
+            <li class="page-item">
+              <a
+                class="page-link"
+                href="{{ url_for('get_chats_by_date_and_users', start_date=start_date, end_date=end_date, username=username, page=11) }}"
+              >
+                Next
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </nav>
+      </div>
+
+      <!-- Download Button -->
+      <div class="text-center mt-4 d-none">
+        <a href="#" onclick="validateAndDownload(event)" class="btn btn-primary"
+          >Download Chat as CSV</a
+        >
+      </div>
+      {% else %}
+      <div class="alert alert-warning text-center">
+        No chats found for the selected filters.
+      </div>
+      {% endif %}
+
+      <!-- Search Again Button -->
+      <div class="text-center mt-4">
+        <a href="/" class="btn btn-secondary">Search Again</a>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <script>
+      // Toggle Answer functionality
+      function toggleAnswer(index) {
+        const answerElement = document.getElementById(`answer-${index}`);
+        const toggleButton = document.getElementById(`toggle-button-${index}`);
+
+        if (answerElement.classList.contains("expanded")) {
+          answerElement.classList.remove("expanded");
+          toggleButton.innerText = "... See More";
+        } else {
+          answerElement.classList.add("expanded");
+          toggleButton.innerText = "See Less";
+        }
+      }
+
+      // Download validation
+      function validateAndDownload(event) {
+        event.preventDefault();
+        
+        // Get the date filter value
+        const dateFilter = document.getElementById("date-filter").value;
+        let startDate = document.getElementById("start_date").value;
+        let endDate = document.getElementById("end_date").value;
+        
+        // If no dates are set, check the date filter
+        if ((!startDate || !endDate) && dateFilter !== 'none') {
+            // Get dates based on filter selection
+            const dates = getDateRangeForFilter(dateFilter);
+            startDate = dates.startDate;
+            endDate = dates.endDate;
+        }
+        
+        // Validate dates
+        if (!startDate || !endDate) {
+            showAlert("Please select a date range or choose a date filter", "warning");
+            return false;
+        }
+        
+        // Get username if any
+        const username = document.getElementById("username").value;
+        
+        // Construct download URL
+        const downloadUrl = `/download-chats-by-date-and-users?` + 
+            `start_date=${encodeURIComponent(startDate)}` +
+            `&end_date=${encodeURIComponent(endDate)}` +
+            `&username=${encodeURIComponent(username || "")}`;
+        
+        // Initiate download
+        window.location.href = downloadUrl;
+    }
+
+      // Main filtering functionality
+      document.addEventListener("DOMContentLoaded", function () {
+        const dateFilter = document.getElementById("date-filter");
+        const customDateRange = document.getElementById("custom-date-range");
+        const dateRangeInput = document.getElementById("date-range");
+        const startDateInput = document.getElementById("start_date");
+        const endDateInput = document.getElementById("end_date");
+
+        // Initialize Flatpickr for custom date range
+        const flatpickrInstance = flatpickr(dateRangeInput, {
+          mode: "range",
+          dateFormat: "Y-m-d",
+          maxDate: "today",
+          onChange: function (selectedDates) {
+            if (selectedDates.length === 2) {
+              startDateInput.value = formatDate(selectedDates[0]);
+              endDateInput.value = formatDate(selectedDates[1]);
+            }
+          },
+        });
+
+        // Date filter change handler
+        dateFilter.addEventListener("change", function (e) {
+          const selectedFilter = e.target.value;
+
+          if (selectedFilter === "custom") {
+            customDateRange.style.display = "block";
+            dateRangeInput.value = "";
+            startDateInput.value = "";
+            endDateInput.value = "";
+          } else {
+            customDateRange.style.display = "none";
+            const dates = getDateRangeForFilter(selectedFilter);
+            startDateInput.value = dates.startDate;
+            endDateInput.value = dates.endDate;
+          }
+        });
+
+        // Username functionality
+        setupUsernameFilter();
+
+        fetchAllChatsButton.addEventListener("click", function () {
+          // Make an AJAX call to fetch all chats
+          fetch("/get-all-chats")
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Failed to fetch chats");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              if (data.error) {
+                showAlert(data.error, "danger");
+                return;
+              }
+
+              // Update the page with all chat data dynamically
+              const container = document.querySelector(".container");
+              container.innerHTML = "<h1>All Chats</h1>"; // Clear the existing content
+
+              // Loop through and render each chat
+              data.chats.forEach((chat) => {
+                const chatCard = `
+                                <div class="card mb-4 shadow-sm">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Date: ${chat.date}</h5>
+                                        <p class="card-text"><strong>Username:</strong> ${chat.username}</p>
+                                        <p class="card-text"><strong>Question:</strong> ${chat.question}</p>
+                                        <p class="card-text"><strong>Answer:</strong> ${chat.answer}</p>
+                                    </div>
+                                </div>
+                            `;
+                container.innerHTML += chatCard;
+              });
+            })
+            .catch((error) => {
+              console.error(error);
+              showAlert("An error occurred while fetching chats.", "danger");
+            });
+        });
+      });
+
+      // Helper Functions
+      function formatDate(date) {
+        return date.toISOString().split("T")[0];
+      }
+
+      function getDateRangeForFilter(filter) {
+        const today = new Date();
+        let startDate = new Date();
+        let endDate = new Date();
+
+        switch (filter) {
+          case "today":
+            startDate = today;
+            endDate = today;
+            break;
+          case "yesterday":
+            startDate.setDate(today.getDate() - 1);
+            endDate = startDate;
+            break;
+          case "this_week":
+            startDate.setDate(today.getDate() - today.getDay()); // Start of the week
+            endDate = today;
+            break;
+          case "last_week":
+            startDate.setDate(today.getDate() - today.getDay() - 7); // Start of last week
+            endDate.setDate(startDate.getDate() + 6); // End of last week
+            break;
+          case "this_month":
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1); // First day of this month
+            endDate = today;
+            break;
+          case "last_month":
+            startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1); // First day of last month
+            endDate = new Date(today.getFullYear(), today.getMonth(), 0); // Last day of last month
+            break;
+          default:
+            return { startDate: "", endDate: "" };
+        }
+
+        const formattedStartDate = formatDate(startDate);
+        const formattedEndDate = formatDate(endDate);
+
+        // Update hidden fields
+        document.getElementById("start_date").value = formattedStartDate;
+        document.getElementById("end_date").value = formattedEndDate;
+
+        return { startDate: formattedStartDate, endDate: formattedEndDate };
+      }
+
+      function showAlert(message, type = "danger") {
+        const alertDiv = document.createElement("div");
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+
+        const container = document.querySelector(".container");
+        container.insertBefore(alertDiv, container.firstChild);
+
+        setTimeout(() => {
+          alertDiv.remove();
+        }, 5000);
+      }
+
+      function setupUsernameFilter() {
+    const usernameInput = document.getElementById("username");
+    const suggestionsBox = document.getElementById("username-suggestions");
+    const suggestionList = document.getElementById("suggestion-list");
+
+    // Trigger input event on the username input box
+    usernameInput.addEventListener("input", function () {
+      const query = this.value.trim();
+
+      // Hide suggestions if input is empty
+      if (query.length < 1) {
+        suggestionsBox.style.display = "none";
+        return;
+      }
+
+      // Simulate an API call to fetch usernames (replace with actual API endpoint)
+      fetch(`/search-usernames?query=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((usernames) => {
+          suggestionList.innerHTML = ""; // Clear previous suggestions
+
+          if (usernames.length > 0) {
+            suggestionsBox.style.display = "block";
+
+            usernames.slice(0, 5).forEach((username) => {
+              const suggestionItem = document.createElement("div");
+              suggestionItem.className = "list-group-item list-group-item-action";
+              suggestionItem.textContent = username;
+
+              // Add click event to select username
+              suggestionItem.addEventListener("click", () => {
+                usernameInput.value = username;
+                suggestionsBox.style.display = "none";
+              });
+
+              suggestionList.appendChild(suggestionItem);
+            });
+          } else {
+            suggestionsBox.style.display = "none";
+          }
+        });
+    });
+
+    // Close suggestions when clicking outside
+    document.addEventListener("click", function (e) {
+      if (!suggestionsBox.contains(e.target) && e.target !== usernameInput) {
+        suggestionsBox.style.display = "none";
+      }
+    });
+  }
+
+  // Initialize the username filter functionality on DOM load
+  document.addEventListener("DOMContentLoaded", setupUsernameFilter);
+      document.addEventListener("DOMContentLoaded", function() {
+        const dateFilter = document.getElementById("date-filter");
+        const customDateRange = document.getElementById("custom-date-range");
+        
+        dateFilter.addEventListener("change", function(e) {
+            const selectedFilter = e.target.value;
+            
+            if (selectedFilter === "custom") {
+                customDateRange.style.display = "block";
+                // Clear the hidden inputs
+                document.getElementById("start_date").value = "";
+                document.getElementById("end_date").value = "";
+            } else if (selectedFilter !== "none") {
+                customDateRange.style.display = "none";
+                const dates = getDateRangeForFilter(selectedFilter);
+                document.getElementById("start_date").value = dates.startDate;
+                document.getElementById("end_date").value = dates.endDate;
+            }
+        });
+    });
+
+
+
+
+
+    
+    </script>
+  </body>
+</html>
