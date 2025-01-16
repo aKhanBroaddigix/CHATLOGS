@@ -1,51 +1,1372 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard and Retrieve User Chats</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='title_img.png') }}"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3"></script>
+
     <style>
-        body { 
-            background: url("{{ url_for('static', filename='fernwood_bg.jpg') }}") no-repeat center center fixed; 
-            background-size: cover; 
-            color: #333; 
-            font-family: Arial, sans-serif; 
-        }
-        .card {
-            border-color: #c71585; 
-            background-color: rgba(255, 255, 255, 0.8); 
-            padding: 20px; 
-            max-width: 400px;
-            margin: 0 auto;
-        }
-        h1 { color: #ffffff; text-align: center; margin-top: 30px; }
-        .btn-primary { background-color: #c71585; border: none; }
-        .btn-primary:hover { background-color: #a5146d; }
-        .form-label { font-weight: bold; }
+      body {
+        /* background: url("{{ url_for('static', filename='fernwood_bg.jpg') }}") no-repeat center center fixed; */
+        background-size: cover;
+        color: #333;
+        font-family: Arial, sans-serif;
+        background-color: #d8d1d1;
+
+
+      }
+
+      h1,
+      h3 {
+        color: #ffffff;
+      }
+
+      body.dark-mode {
+        background: url("{{ url_for('static', filename='fernwood_bg.jpg') }}")
+          no-repeat center center fixed;
+        background-size: cover;
+        color: white;
+      }
+
+      body.dark-mode h1,
+      body.dark-mode h3 {
+        color: #c71585;
+      }
+      body.dark-mode #dashborad_heading{
+        color: #ffffff !important;
+      }
+
+      .mode-toggle {
+        position: absolute;
+        top: 1.5rem;
+        right: 10px;
+        z-index: 1000;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        /* max-width: 500px; */
+      }
+
+      .my-5 {
+        padding-top: 3rem;
+      }
+
+      /* #date-filter {
+            max-width: 250px;
+            text-align: right;
+        } */
+
+      .mode-toggle select,
+      .mode-toggle button {
+        width: auto;
+        height: 40px;
+        font-size: 16px;
+        cursor: pointer;
+        /* background-color: transparent; */
+        border: none;
+        /* color: #c71585; */
+      }
+
+      body.dark-mode #custom-date-range input:focus {
+        box-shadow: 0 0 0 0.25rem #f7eaf200;
+      }
+
+      .card {
+        border-color: #c71585;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .btn-primary {
+        background-color: #c71585;
+        border: none;
+      }
+
+      .btn-primary:hover {
+        background-color: #a5146d;
+      }
+
+      .form-label {
+        font-weight: bold;
+      }
+
+      #date-filter {
+        border: var(--bs-border-width) solid #c71585;
+      }
+
+      /* #date-filter:hover {
+            box-shadow: 0 0 0 .25rem #f7eaf2;
+        } */
+
+      .chart-container {
+        display: flex;
+        justify-content: space-around;
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+
+      .chart-box {
+        width: 100%;
+        height: 350px;
+        margin: 15px 0px 10px 0px;
+        box-shadow: 4px 8px 8px hsl(4deg 0% 0% / 0.2);
+      }
+
+      .card canvas {
+        width: 100% !important;
+        height: 100% !important;
+        padding-bottom: 20px;
+      }
+
+      .update {
+        margin-top: 41px !important;
+      }
+
+      #username-suggestions {
+        z-index: 1000;
+        display: none;
+      }
+
+      #date-filter-container {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-grow: 1;
+        margin-right: auto;
+      }
+
+      #custom-date-range {
+        display: none;
+        /* Start hidden by default */
+        position: absolute;
+        top: 50px;
+        /* right: 100px; */
+        background: white;
+        padding: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        z-index: 1050;
+        /* margin-top: 20px; */
+      }
+
+      #custom-date-range input {
+        margin-bottom: 10px;
+        /* border: var(--bs-border-width) solid #c71585; */
+        width: 200px;
+      }
+
+      #custom-date-range.visible {
+        display: block;
+        /* Show when "Custom" is selected */
+      }
+
+      #custom-date-range button {
+        align-self: flex-end;
+      }
+
+      #custom-date-range input:focus {
+        box-shadow: 0 0 0 0.25rem #f7eaf2;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+      }
+
+      /* Responsive styles for the user list */
+      #user-list {
+        width: 100%;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 0;
+      }
+
+      #user-list .list-group-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: nowrap;
+        padding: 10px 15px;
+        font-size: 0.95rem;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        margin-bottom: 5px;
+        border-radius: 8px;
+        transition: all 0.2s ease-in-out;
+      }
+
+      #user-list .list-group-item .user-email {
+        flex-grow: 1;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        margin-right: 10px;
+      }
+
+      #user-list .list-group-item:hover {
+        background-color: rgba(199, 21, 133, 0.1);
+        cursor: pointer;
+      }
+
+      #user-list .badge {
+        flex-shrink: 0;
+        background-color: #c71585 !important;
+        color: #fff;
+        font-size: 0.8rem;
+        padding: 5px 10px;
+        border-radius: 12px;
+      }
+
+      #filter-container {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+      }
+
+      #date-range {
+        margin-bottom: 10px;
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+      }
+
+      .flatpickr-calendar {
+        background-color: white;
+        color: #c71585;
+        border: 1px solid #c71585;
+        font-size: 12px;
+        border-radius: 8px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .flatpickr-day {
+        font-weight: 500;
+        color: #c71585;
+        border-radius: 4px;
+      }
+
+      .flatpickr-day:hover {
+        background-color: #c71585;
+        color: white;
+      }
+
+      .flatpickr-day.selected,
+      .flatpickr-day.startRange,
+      .flatpickr-day.endRange {
+        background-color: #c71585;
+        color: white;
+        font-weight: bold;
+      }
+
+      .flatpickr-day.inRange {
+        background-color: rgba(199, 21, 133, 0.2);
+        color: #c71585;
+      }
+
+      .flatpickr-weekday {
+        font-weight: bold;
+        color: #c71585;
+        text-transform: uppercase;
+      }
+
+      .flatpickr-month {
+        color: #a5146d;
+        font-weight: bold;
+        font-size: 14px;
+      }
+
+      .flatpickr-prev-month,
+      .flatpickr-next-month {
+        color: #a5146d;
+        font-size: 14px;
+      }
+
+      .flatpickr-prev-month:hover,
+      .flatpickr-next-month:hover {
+        color: #c71585;
+      }
+
+      #username-suggestions {
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      #username-suggestions .list-group-item {
+        cursor: pointer;
+        padding: 10px;
+        transition: background-color 0.2s;
+      }
+
+      #username-suggestions .list-group-item:hover {
+        background-color: #f0f0f0;
+      }
+
+      .userwithchatdyas {
+        border-radius: 8px;
+        box-shadow: 4px 8px 8px hsl(4deg 0% 0% / 0.2);
+        margin-top:4rem;
+      }
+
+      #toggle-dark-mode {
+        margin-left: auto;
+        /* Push toggle to the right */
+        font-size: 16px;
+        background-color: #ffffff;
+        border: none;
+        /* color: #c71585; */
+        cursor: pointer;
+      }
+
+      .chart-box-no-style {
+        width: 100%;
+        height: 350px;
+        padding: 20px;
+        box-shadow: none;
+        margin-top: 4.5rem;
+        /* Remove shadow */
+        border: none;
+        /* Remove border */
+        background-color: transparent;
+        /* Make background transparent */
+      }
+      .box_show_heading{
+        margin-top:3.2rem;
+      }
+      .navbar{
+        background-color: #c71585;
+      }
+      /* Stats Cards Styling */
+      .stats-card {
+          border: none;
+          border-left: 5px solid var(--primary-color);
+          /* Left border color */
+          transition: transform 0.2s ease-in-out;
+          color: #ffffff !important; /* Set font color to white */
+      }
+      
+      .stats-card:hover {
+          transform: translateY(-5px);
+          /* Slight elevation on hover */
+          box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+          /* Enhanced shadow on hover */
+      }
+      
+      
+      
+      .stats-card .card-body {
+          padding: 30px; /* Increased padding for better spacing */
+      }
+      
+      .stats-card .card-title {
+          font-size: 1.2rem; /* Slightly larger title */
+          font-weight: bold;
+          margin-bottom: 10px;
+      }
+      
+      .stats-card .card-value {
+          font-size: 3.5rem; /* Increased size for numbers */
+          font-weight: 900; /* Make numbers bold */
+      }
+      
+      .stats-card small {
+          font-size: 0.875rem;
+          color: #ffffff; /* Set small text color to white */
+      }
+      
+      .text-center {
+          text-align: center; /* Align all text in center */
+      }
+      #total-chats {
+        color:#ffffff;
+        font-size: 2rem;
+      }
+      #total-tickets{
+        color:#ffffff;
+        font-size: 2rem;
+      }
+      
     </style>
-</head>
-<body>
-    <div class="container mt-5">
-        <h1>Login</h1>
-        <div class="card shadow">
-            <form action="{{ url_for('login') }}" method="POST">
-                <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Login</button>
-                {% with messages = get_flashed_messages() %}
-                    {% if messages %}
-                        <div class="alert alert-danger mt-3">{{ messages[0] }}</div>
-                    {% endif %}
-                {% endwith %}
-            </form>
+  </head>
+
+  <body>
+
+<!-- Navbar code -->
+
+<nav class="navbar navbar-expand-lg navbar-light  shadow-sm">
+  <div class="container-fluid">
+    <!-- Logo or Brand Name -->
+    <a class="navbar-brand" href="#">
+      <img
+        src="{{ url_for('static', filename='frenwood-logo.png') }}"
+        alt="Logo"
+        width="100"
+        height="30"
+    
+        class="d-inline-block align-text-top ms-5"
+      />
+     
+    </a>
+
+    <!-- Toggler for responsive design -->
+    <button
+      class="navbar-toggler"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarContent"
+      aria-controls="navbarContent"
+      aria-expanded="false"
+      aria-label="Toggle navigation"
+    >
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarContent">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        
+      </ul>
+
+      <!-- Date Filter -->
+      <div class="d-flex align-items-center">
+        <select id="date-filter" class="form-select me-2">
+          <option value="none">Select a Date Range</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="this_week">This Week</option>
+          <option value="last_week">Last Week</option>
+          <option value="this_month">This Month</option>
+          <option value="last_month">Last Month</option>
+          <option value="custom">Custom</option>
+        </select>
+        <div id="custom-date-range" class="ms-2" style="display: none">
+          <input
+            type="text"
+            id="date-range"
+            class="form-control"
+            placeholder="Select Date Range"
+          />
+          <button id="apply-custom-filter" class="btn btn-primary">
+            Apply
+          </button>
         </div>
+      </div>
+
+      <!-- Dark Mode Toggle -->
+      <button id="toggle-dark-mode" class="btn ms-3">
+        <i class="fas fa-sun"></i>
+      </button>
     </div>
-</body>
+  </div>
+</nav>
+
+<!-- Navbar code end  -->
+    
+
+
+
+
+
+
+    <div class="container mb-5 mt-3">
+      <div class="row">
+        <!-- Left Column -->
+        <div class="col-md-8">
+         <!-- <h1 class="text-center mb-4 " id="dashborad_heading">Dashboard</h1>  -->
+
+          <div class="chart-container">
+            <div class="card chart-box">
+              <h3 class="text-center" style="color: #c71585; padding-top: 1rem">
+                Chat Logs Line Graph
+              </h3>
+              <canvas id="lineChart"></canvas>
+            </div>
+
+            <!-- Weekly Chat Volume Chart -->
+            <div class="card chart-box">
+              <h3 class="text-center" style="color: #c71585; padding-top: 1rem">
+                Weekly Chat Volume
+              </h3>
+
+              <canvas id="weeklyChatVolumeChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card chart-box" style="margin-top: 30px">
+            <h3 class="text-center" style="color: #c71585; padding-top: 1rem">
+              Chats Per Club
+            </h3>
+            <canvas id="chatsPerClubChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-md-4">
+          <!-- Button for full chats -->
+          <div class="d-flex justify-content-center mb-4 mt-4">
+            <button id="view-all-chats" class="btn btn-primary">
+              View All Chats
+            </button>
+          </div>
+       <!--   <div class="card  shadow-sm box_show_heading">
+            <div
+              id="total-chats-counter"
+              class="d-flex justify-content-center align-items-center mt-4"
+            >
+              <h5 style="color: #c71585; margin-right: 10px">
+                Total Messages:
+              </h5>
+              <h1><span id="total-chats">0</span></h1>
+            </div>
+
+            <div
+              id="total-tickets-counter"
+              class="d-flex justify-content-center align-items-center mt-4"
+            >
+              <h5 style="color: #c71585; margin-right: 10px">
+                Tickets Created:
+              </h5>
+              <h1><span id="total-tickets">0</span></h1>
+            </div>
+          </div>
+
+        -->
+        <div class="row mt-4">
+          <!-- Total Messages Card -->
+          <div class="col-md-6">
+            <div class="card stats-card shadow-sm" style="background-color: #FE718F;">
+              <div class="card-body text-center">
+                <h6 class="card-title">Total Messages</h6>
+                <h1 class="card-value" id="total-chats">2165</h1>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tickets Created Card -->
+          <div class="col-md-6">
+            <div class="card stats-card shadow-sm" style="background-color: #6AD3D4;">
+              <div class="card-body text-center">
+                <h6 class="card-title">Tickets Created</h6>
+                <h1 class="card-value" id="total-tickets">117</h1>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+          <div class="chart-container">
+            <!-- Top Chat Contributors Chart -->
+            <!-- <div class="card chart-box"> -->
+
+            <div class="chart-box-no-style">
+             <!-- <h3 class="text-center" style="color: #c71585; padding-top: 1rem">
+                Top Chat Contributors
+              </h3>-->
+              <canvas id="topChatContributorsChart"></canvas>
+            </div>
+          </div>
+          <div class="userwithchatdyas">
+            <div class="card p-4 shadow-sm ">
+              <h3 class="text-center" style="color: #c71585">
+                Users with Chat Days
+              </h3>
+              <div class="d-flex align-items-center mb-3 position-relative">
+                <label for="username-filter" class="form-label me-2"></label>
+                <input
+                  type="text"
+                  id="username-filter"
+                  class="form-control me-2"
+                  placeholder="Enter Username"
+                  autocomplete="off"
+                />
+                <button id="apply-username-filter" class="btn btn-primary">
+                  Apply
+                </button>
+                <ul
+                  id="username-suggestions"
+                  class="list-group position-absolute w-100"
+                  style="top: 100%; z-index: 1000; display: none"
+                ></ul>
+              </div>
+              <ul id="user-list" class="list-group mt-3"></ul>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end mt-3">
+            <button id="download-csv" class="btn btn-primary">
+              Download CSV
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+      // create two variable for total chats and total tickets
+      var totalChats = 0;
+      var totalTickets = 0;
+      // Apply "Today" filter on page load
+      window.onload = function () {
+        // Set the dropdown to "today"
+        document.getElementById("custom-date-range").style.display = "none";
+        document.getElementById("date-filter").value = "today";
+        applyDateFilter("today");
+        updateUsersWithChatDays("today");
+      };
+
+      // Toggle between Light and Dark Mode
+      document
+        .getElementById("toggle-dark-mode")
+        .addEventListener("click", function () {
+          const body = document.body;
+          const icon = document.querySelector("#toggle-dark-mode i");
+
+          body.classList.toggle("dark-mode");
+
+          // Change the icon depending on the mode
+          if (body.classList.contains("dark-mode")) {
+            icon.classList.remove("fa-sun");
+            icon.classList.add("fa-moon");
+          } else {
+            icon.classList.remove("fa-moon");
+            icon.classList.add("fa-sun");
+          }
+        });
+
+      // Soft color palette
+      const softColorPalette = [
+        "rgba(255, 99, 132, 0.9)", // Soft Red
+        "rgba(54, 162, 235, 0.9)", // Soft Blue
+        "rgba(255, 206, 86, 0.9)", // Soft Yellow
+        "rgba(75, 192, 192, 0.9)", // Soft Teal
+        "rgba(153, 102, 255, 0.9)", // Soft Purple
+        "rgba(255, 159, 64, 0.9)", // Soft Orange
+      ];
+
+      // Function to generate colors dynamically from the palette
+      function generateSoftColors(count) {
+        const colors = [];
+        for (let i = 0; i < count; i++) {
+          colors.push(softColorPalette[i % softColorPalette.length]);
+        }
+        return colors;
+      }
+
+      // Listener for the date filter dropdown
+      document
+        .getElementById("date-filter")
+        .addEventListener("change", (event) => {
+          const selectedFilter = document.getElementById("date-filter").value;
+          const customDateRange = document.getElementById("custom-date-range");
+          const dateRangeInput = document.getElementById("date-range");
+
+          // Check if "Custom" is selected
+          if (selectedFilter === "custom") {
+            // Clear the input field and ensure it is visible
+            dateRangeInput.value = "";
+
+            // Always show the custom date range input
+            customDateRange.style.display = "block";
+
+            // Destroy any existing Flatpickr instance
+            if (dateRangeInput._flatpickr) {
+              dateRangeInput._flatpickr.destroy();
+            }
+
+            // Reinitialize Flatpickr for the date range input
+            flatpickr(dateRangeInput, {
+              mode: "range",
+              dateFormat: "Y-m-d",
+              maxDate: "today",
+              onClose: function (selectedDates) {
+                if (selectedDates.length === 2) {
+                  console.log("Selected Start Date:", selectedDates[0]);
+                  console.log("Selected End Date:", selectedDates[1]);
+                }
+              },
+            });
+          } else {
+            // Handle other date filters
+            customDateRange.style.display = "none";
+
+            // Destroy any existing Flatpickr instance
+            if (dateRangeInput._flatpickr) {
+              dateRangeInput._flatpickr.destroy();
+            }
+
+            // Apply the selected filter
+            applyDateFilter(selectedFilter);
+          }
+        });
+
+      // Force re-trigger the "Custom" logic if selected consecutively
+      document
+        .getElementById("date-filter")
+        .addEventListener("click", (event) => {
+          const selectedFilter = document.getElementById("date-filter").value;
+
+          // Force re-trigger the change logic if "Custom" is selected consecutively
+          if (selectedFilter === "custom") {
+            document
+              .getElementById("date-filter")
+              .dispatchEvent(new Event("change"));
+          }
+        });
+
+      // Apply filter for the custom range when the "Apply" button is clicked
+      document
+        .getElementById("apply-custom-filter")
+        .addEventListener("click", () => {
+          const dateRangeInput = document.getElementById("date-range").value;
+          const [startDate, endDate] = dateRangeInput.split(" to ");
+
+          if (startDate && endDate) {
+            // Apply the custom date filter
+            applyDateFilter("custom", startDate, endDate);
+
+            // Hide the custom date range input after applying
+            document.getElementById("custom-date-range").style.display = "none";
+          } else {
+            console.error("Invalid date range selected.");
+            alert("Please select a valid date range.");
+          }
+        });
+
+      function applyDateFilter(filter, startDate = null, endDate = null) {
+        const requestBody = { filter, startDate, endDate };
+
+        fetch("/filter-charts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("API Response:", data);
+            if (data.error) {
+              console.error("Error:", data.error);
+              return;
+            }
+
+            // Update Weekly Chat Volume Chart
+            const weeklyChatLabels = data.weeklyChatVolume.map(
+              (item) => item._id
+            );
+            const weeklyChatData = data.weeklyChatVolume.map(
+              (item) => item.count
+            );
+            updateChart(
+              weeklyChatVolumeChart,
+              weeklyChatLabels,
+              weeklyChatData
+            );
+
+            // Update Top Chat Contributors Chart
+            const topContributorsLabels = data.topChatContributors.map(
+              (item) => item._id
+            );
+            const topContributorsData = data.topChatContributors.map(
+              (item) => item.count
+            );
+            updateChart(
+              topChatContributorsChart,
+              topContributorsLabels,
+              topContributorsData
+            );
+
+            // Update Line Graph
+            fetchLineGraphData(filter, startDate, endDate);
+
+            fetchChatsPerClubData(filter, startDate, endDate);
+
+            // Update total chats count
+            document.getElementById("total-chats").textContent =
+              data.totalChats;
+            totalChats = data.totalChats;
+            totalTickets = data.totalTickets;
+            // Update ticket count
+            document.getElementById("total-tickets").textContent =
+              data.totalTickets;
+
+            // Update users with chat days
+            updateUsersWithChatDays(filter, startDate, endDate);
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      }
+
+      // Fetch line graph data and update chart
+      function fetchLineGraphData(filter, startDate = null, endDate = null) {
+        const requestBody = { filter, startDate, endDate };
+
+        fetch("/api/line_chart_data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.error) {
+              console.error("Error:", data.error);
+              return;
+            }
+
+            const labels = data.map((item) => item._id);
+            const counts = data.map((item) => item.count);
+
+            updateChart(lineChart, labels, counts);
+          })
+          .catch((error) => {
+            console.error("Error fetching line chart data:", error);
+          });
+      }
+
+      function updateChart(chart, labels, data) {
+        const colors = generateSoftColors(labels.length); // Generate soft colors
+
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = data;
+        chart.data.datasets[0].backgroundColor = colors; // Assign colors
+        chart.update();
+      }
+
+      // Initialize Flatpickr for Date Range with Range Mode
+      flatpickr("#date-range", {
+        mode: "range",
+        dateFormat: "Y-m-d",
+        maxDate: "today",
+        onClose: function (selectedDates, dateStr, instance) {
+          if (selectedDates.length === 2) {
+            const [startDate, endDate] = selectedDates;
+            console.log("Selected Start Date:", startDate);
+            console.log("Selected End Date:", endDate);
+          }
+        },
+      });
+
+      flatpickr("#selected_date", {
+        dateFormat: "Y-m-d",
+        maxDate: "today",
+      });
+
+      // Initialize Charts (Chart.js instances)
+      const weeklyChatVolumeChart = new Chart(
+        document.getElementById("weeklyChatVolumeChart"),
+        {
+          type: "bar",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: "Chats per Day",
+                data: [],
+                backgroundColor: "rgba(75, 192, 192, 0.9)",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } },
+          },
+        }
+      );
+
+      const topChatContributorsChart = new Chart(
+        document.getElementById("topChatContributorsChart"),
+        {
+          type: "doughnut",
+          data: {
+            labels: [], // Dynamic usernames
+            datasets: [
+              {
+                data: [], // Data for the number of chats
+                backgroundColor: generateSoftColors(6), // Use your existing color function
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false, // Hide the legend
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (tooltipItem) {
+                    const dataIndex = tooltipItem.dataIndex;
+                    const label = tooltipItem.chart.data.labels[dataIndex]; // Dynamic username
+                    const value = tooltipItem.raw; // Number of chats
+                    const total = tooltipItem.dataset.data.reduce(
+                      (a, b) => a + b,
+                      0
+                    ); // Total chats
+                    const percentage = ((value / total) * 100).toFixed(2); // Percentage calculation
+                    const percentageDisplay =
+                      percentage < 5 ? "<5%" : percentage + "%";
+
+                    return [
+                      "Username: " + label,
+                      "Chats: " + value,
+                      // "Percentage: " + percentageDisplay
+                    ]; // Separate lines for each info
+                  },
+                },
+                bodyFont: {
+                  size: 14, // Tooltip font size
+                },
+                backgroundColor: "rgba(0, 0, 0, 0.7)", // Dark background for tooltip
+                titleColor: "#ffffff", // White text for tooltip title
+                bodyColor: "#ffffff", // White text for tooltip body
+                borderColor: "#ffffff", // White border for tooltip
+                borderWidth: 1, // Tooltip border width
+              },
+            },
+            layout: {
+              padding: {
+                top: 30, // Adjust padding to fit percentages inside
+                bottom: 30,
+              },
+            },
+          },
+          plugins: [
+            {
+              id: "chartPercentageLabels",
+              afterDraw: (chart) => {
+                const {
+                  ctx,
+                  chartArea: { width, height },
+                } = chart;
+
+                chart.data.datasets[0].data.forEach((value, index) => {
+                  const total = chart.data.datasets[0].data.reduce(
+                    (a, b) => a + b,
+                    0
+                  );
+                  let percentage = ((value / total) * 100).toFixed(1);
+                  percentage = percentage < 5 ? "<5" : percentage; // Handle <5% directly
+
+                  const meta = chart.getDatasetMeta(0);
+                  const arc = meta.data[index];
+                  const { x, y } = arc.tooltipPosition();
+
+                  ctx.fillStyle = "#fff"; // White text for percentage
+                  ctx.font = "bold 14px Arial";
+                  ctx.textAlign = "center";
+                  ctx.fillText(percentage + "%", x, y);
+                });
+              },
+            },
+          ],
+        }
+      );
+
+      const chatsPerClubChart = new Chart(
+        document.getElementById("chatsPerClubChart"),
+        {
+          type: "bar",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: "Chats",
+                data: [],
+                backgroundColor: generateSoftColors(10), // Use your soft color palette
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { stacked: true },
+              y: { stacked: true, beginAtZero: true },
+            },
+          },
+        }
+      );
+
+      function fetchChatsPerClubData(filter, startDate = null, endDate = null) {
+        const requestBody = { filter, startDate, endDate };
+
+        fetch("/api/chats_per_club", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.error) {
+              console.error("Error:", data.error);
+              return;
+            }
+
+            const labels = data.map((item) => item.club);
+            const counts = data.map((item) => item.count);
+
+            chatsPerClubChart.data.labels = labels;
+            chatsPerClubChart.data.datasets[0].data = counts;
+            chatsPerClubChart.update();
+          })
+          .catch((error) => {
+            console.error("Error fetching chats per club data:", error);
+          });
+      }
+
+      const lineChart = new Chart(document.getElementById("lineChart"), {
+        type: "line",
+        data: {
+          labels: [], // Add your labels here (dates or categories)
+          datasets: [
+            {
+              label: "Chat Logs",
+              data: [], // Add your data here (chat counts or values)
+              backgroundColor: "rgba(54, 162, 235, 0.2)", // Gradient fill under the line
+              borderColor: "rgba(54, 162, 235, 1)", // Line color
+              borderWidth: 3,
+              tension: 0.4, // Smooth curves for the line
+              pointBackgroundColor: function (context) {
+                const index = context.dataIndex;
+                const colors = [
+                  "rgba(255, 99, 132, 1)", // Red
+                  "rgba(54, 162, 235, 1)", // Blue
+                  "rgba(255, 206, 86, 1)", // Yellow
+                  "rgba(75, 192, 192, 1)", // Teal
+                  "rgba(153, 102, 255, 1)", // Purple
+                  "rgba(255, 159, 64, 1)", // Orange
+                ];
+                return colors[index % colors.length]; // Alternate through the colors
+              },
+              pointBorderColor: "rgba(255, 255, 255, 1)", // White border around the points
+              pointBorderWidth: 2,
+              pointRadius: 6, // Size of the points
+              pointHoverBackgroundColor: "rgba(0, 0, 0, 0.8)", // Dark hover color
+              pointHoverBorderColor: "rgba(0, 0, 0, 1)",
+              pointHoverBorderWidth: 2,
+              fill: true, // Fill the area under the curve
+              backgroundColor: "rgba(54, 162, 235, 0.2)", // Gradient-like fill
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+            },
+          },
+          plugins: {
+            tooltip: {
+              backgroundColor: "rgba(0, 0, 0, 0.8)", // Darker tooltip background
+              titleColor: "#fff",
+              bodyColor: "#fff",
+              borderColor: "#fff", // White border for tooltips
+              borderWidth: 1,
+            },
+          },
+        },
+        layout: {
+          padding: {
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: 20,
+          },
+        },
+      });
+
+      document
+        .getElementById("apply-username-filter")
+        .addEventListener("click", () => {
+          const username = document
+            .getElementById("username-filter")
+            .value.trim();
+          const selectedFilter = document.getElementById("date-filter").value;
+          const dateRangeInput = document.getElementById("date-range").value;
+          let startDate = null,
+            endDate = null;
+
+          if (selectedFilter === "custom" && dateRangeInput) {
+            [startDate, endDate] = dateRangeInput.split(" to ");
+          }
+
+          updateUsersWithChatDays(selectedFilter, startDate, endDate, username);
+        });
+
+      function updateUsersWithChatDays(filter, startDate, endDate, username) {
+        const requestBody = { filter, startDate, endDate, username };
+
+        fetch("/users-with-chats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            const userList = document.getElementById("user-list");
+            userList.innerHTML = "";
+
+            if (data.length === 0) {
+              userList.innerHTML =
+                "<li class='list-group-item'>No users found for the selected filters.</li>";
+              return;
+            }
+
+            data.forEach((user) => {
+              const li = document.createElement("li");
+              li.className =
+                "list-group-item d-flex justify-content-between align-items-center";
+
+              // Create clickable username element
+              const emailSpan = document.createElement("span");
+              emailSpan.className = "user-email";
+              emailSpan.title = user._id;
+              emailSpan.textContent =
+                user._id.length > 20
+                  ? user._id.substring(0, 30) + "..."
+                  : user._id;
+              emailSpan.style.cursor = "pointer";
+              emailSpan.style.color = "#c71585";
+              emailSpan.style.textDecoration = "underline";
+
+              // Redirect to chats_by_date_and_users page on click
+              emailSpan.addEventListener("click", function () {
+                const selectedFilter =
+                  document.getElementById("date-filter").value; // Get selected filter
+                let startDate = null;
+                let endDate = null;
+
+                // Calculate start and end dates based on the selected filter
+                const today = new Date();
+
+                switch (selectedFilter) {
+                  case "today":
+                    startDate = today.toISOString().split("T")[0]; // Today's date
+                    endDate = today.toISOString().split("T")[0]; // Same as start date
+                    break;
+
+                  case "yesterday":
+                    const yesterday = new Date(today);
+                    yesterday.setDate(today.getDate() - 1);
+                    startDate = yesterday.toISOString().split("T")[0];
+                    endDate = yesterday.toISOString().split("T")[0];
+                    break;
+
+                  case "this_week":
+                    const firstDayOfWeek = new Date(today);
+                    firstDayOfWeek.setDate(today.getDate() - today.getDay()); // Start of the week (Sunday)
+                    startDate = firstDayOfWeek.toISOString().split("T")[0];
+                    endDate = today.toISOString().split("T")[0]; // End date is today
+                    break;
+
+                  case "last_week":
+                    const lastWeekStart = new Date(today);
+                    lastWeekStart.setDate(today.getDate() - today.getDay() - 7); // Start of last week
+                    const lastWeekEnd = new Date(today);
+                    lastWeekEnd.setDate(today.getDate() - today.getDay() - 1); // End of last week (Saturday)
+                    startDate = lastWeekStart.toISOString().split("T")[0];
+                    endDate = lastWeekEnd.toISOString().split("T")[0];
+                    break;
+
+                  case "this_month":
+                    const firstDayOfMonth = new Date(
+                      today.getFullYear(),
+                      today.getMonth(),
+                      1
+                    );
+                    startDate = firstDayOfMonth.toISOString().split("T")[0];
+                    endDate = today.toISOString().split("T")[0]; // End date is today
+                    break;
+
+                  case "last_month":
+                    const firstDayOfLastMonth = new Date(
+                      today.getFullYear(),
+                      today.getMonth() - 1,
+                      1
+                    );
+                    const lastDayOfLastMonth = new Date(
+                      today.getFullYear(),
+                      today.getMonth(),
+                      0
+                    );
+                    startDate = firstDayOfLastMonth.toISOString().split("T")[0];
+                    endDate = lastDayOfLastMonth.toISOString().split("T")[0];
+                    break;
+
+                  case "custom":
+                    // Handle custom date range (already provided via input)
+                    break;
+
+                  default:
+                    console.error("Invalid date filter selected");
+                }
+
+                // Construct the URL with calculated dates
+                const url = new URL(
+                  window.location.origin + "/get-chats-by-date-and-users"
+                );
+                url.searchParams.append("username", user._id); // Append username
+                url.searchParams.append("filter", selectedFilter); // Append selected filter
+                if (startDate) url.searchParams.append("start_date", startDate); // Append start date if available
+                if (endDate) url.searchParams.append("end_date", endDate); // Append end date if available
+
+                //  alert(url.toString()); Debug URL
+                window.location.href = url.toString(); // Redirect to the filtered chat page
+              });
+
+              const badgeSpan = document.createElement("span");
+              badgeSpan.className = "badge";
+              badgeSpan.textContent = user.days + " Days";
+
+              li.appendChild(emailSpan);
+              li.appendChild(badgeSpan);
+              userList.appendChild(li);
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching users with chat days:", error);
+          });
+      }
+
+      document
+        .getElementById("username-filter")
+        .addEventListener("input", function () {
+          const query = this.value.trim();
+
+          if (query.length < 2) {
+            document.getElementById("username-suggestions").style.display =
+              "none";
+            return;
+          }
+
+          fetch(`/search-usernames?query=${encodeURIComponent(query)}`)
+            .then((response) => response.json())
+            .then((data) => {
+              const suggestions = document.getElementById(
+                "username-suggestions"
+              );
+              suggestions.innerHTML = ""; // Clear existing suggestions
+
+              if (data.length === 0) {
+                suggestions.style.display = "none";
+                return;
+              }
+
+              data.forEach((username) => {
+                const listItem = document.createElement("li");
+                listItem.className = "list-group-item list-group-item-action";
+                listItem.textContent = username;
+                listItem.style.cursor = "pointer";
+
+                listItem.addEventListener("click", function () {
+                  document.getElementById("username-filter").value = username; // Set input value
+                  suggestions.style.display = "none"; // Hide suggestions
+                });
+
+                suggestions.appendChild(listItem);
+              });
+
+              suggestions.style.display = "block"; // Show suggestions
+            })
+            .catch((error) => {
+              console.error("Error fetching username suggestions:", error);
+            });
+        });
+
+      // Hide suggestions when clicking outside the input field
+      document.addEventListener("click", function (event) {
+        const suggestions = document.getElementById("username-suggestions");
+        const input = document.getElementById("username-filter");
+
+        if (
+          !input.contains(event.target) &&
+          !suggestions.contains(event.target)
+        ) {
+          suggestions.style.display = "none";
+        }
+      });
+
+      document.getElementById("download-csv").addEventListener("click", () => {
+        const selectedFilter = document.getElementById("date-filter").value;
+        const dateRangeInput = document.getElementById("date-range").value;
+        const username = document
+          .getElementById("username-filter")
+          .value.trim();
+        let startDate = null,
+          endDate = null;
+
+        if (selectedFilter === "custom" && dateRangeInput) {
+          [startDate, endDate] = dateRangeInput.split(" to ");
+        }
+        console.log("Downloading CSV file part...", totalChats, totalTickets);
+        const requestBody = {
+          filter: selectedFilter,
+          startDate,
+          endDate,
+          username,
+          totalChats,
+          totalTickets,
+        };
+
+        fetch("/export-filtered-data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Failed to export data");
+            }
+            return response.blob();
+          })
+          .then((blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "filtered_data.csv";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+          })
+          .catch((error) => {
+            console.error("Error downloading CSV:", error);
+            alert("Failed to download the CSV file.");
+          });
+      });
+      // view all chats
+      document
+        .getElementById("view-all-chats")
+        .addEventListener("click", function () {
+          // Simple redirect to the chats page
+          window.location.href =
+            window.location.origin + "/get-chats-by-date-and-users";
+        });
+    </script>
+  </body>
 </html>
