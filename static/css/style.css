@@ -1,0 +1,271 @@
+/* Base Styles */
+
+
+/* Typography */
+h1 {
+    color: #ffffff;
+    text-align: center;
+}
+
+h5 {
+    font-size: small;
+}
+
+/* Colors and Variables */
+:root {
+    --primary-color: #c71585;
+    --primary-hover: #a5146d;
+    --white: #ffffff;
+    --transparent-white: rgba(255, 255, 255, 0.95);
+}
+
+/* Components */
+.card {
+    border-color: var(--primary-color);
+    background-color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border: none;
+    padding: 0.5rem 1.5rem;
+    height: 45px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    width: auto;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+/* Form Elements */
+.form-label {
+    font-weight: bold;
+    color: var(--white);
+}
+
+.form-control, 
+.form-select {
+    height: 45px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.5rem 2rem;
+    font-size: 1rem;
+    background-color: white;
+}
+
+.form-check-input {
+    margin-right: 0.5rem;
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-label {
+    color: #333;
+    font-size: 0.9rem;
+}
+
+/* Filter Container */
+.filter-container {
+    background-color: var(--transparent-white);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin: 2rem 0;
+}
+
+#chatFilterForm {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.filter-select {
+    min-width: 200px;
+}
+
+.filter-group {
+    position: relative;
+    min-width: 300px;
+}
+
+/* Username Suggestions */
+#username-suggestions {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 0 0 4px 4px;
+    background-color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+}
+
+#username-suggestions .list-group-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border: none;
+}
+
+#username-suggestions .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Chat Text Preview */
+.chat-text-preview {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    position: relative;
+}
+
+.chat-text-preview.expanded {
+    -webkit-line-clamp: unset;
+}
+
+.see-more-btn {
+    color: var(--primary-color);
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-block;
+    padding-left: 5px;
+}
+
+/* Navigation */
+.back-icon {
+    position: absolute;
+    top: 34px;
+    left: 47px;
+    color: var(--white);
+    font-size: 24px;
+    text-decoration: none;
+    z-index: 10;
+}
+
+.back-icon:hover {
+    color: var(--primary-color);
+}
+
+/* Alerts */
+.alert {
+    margin: 1rem 0;
+    border-radius: 4px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.alert-danger {
+    background-color: #fff3cd;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.alert .btn-close {
+    opacity: 0.7;
+}
+
+.alert .btn-close:hover {
+    opacity: 1;
+}
+
+/* Calendar Styles */
+.flatpickr-calendar {
+    background-color: white;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    font-size: 12px;
+    border-radius: 8px;
+    width: auto;
+    height: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.flatpickr-day {
+    font-weight: 500;
+    color: var(--primary-color);
+    border-radius: 4px;
+    border: none;
+}
+
+.flatpickr-day:hover,
+.flatpickr-day.selected {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.flatpickr-day.disabled,
+.flatpickr-day.nextMonthDay,
+.flatpickr-day.prevMonthDay {
+    color: #cccccc;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.flatpickr-weekday {
+    font-weight: bold;
+    color: var(--primary-color);
+    text-transform: uppercase;
+}
+
+.flatpickr-month {
+    color: var(--primary-hover);
+    font-weight: bold;
+    font-size: 14px;
+    border: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* tets */
+/* pagination */
+.pagination .page-link {
+    color: #007bff; /* Default link color */
+    background-color: #ffffff; /* Background color */
+    border: 1px solid #dee2e6; /* Border color */
+    border-radius: 0.25rem; /* Rounded corners */
+    padding: 0.5rem 0.75rem;
+    text-decoration: none;
+    transition: all 0.3s ease; /* Smooth transition */
+}
+.pagination{
+    gap: 0.5rem;
+}
+/* Hover effect for pagination links */
+.pagination .page-link:hover {
+    background-color: #f8f9fa; /* Light gray background */
+    color: #c71585; /* Darker blue on hover */
+    border-color: #c71585; /* Border color changes on hover */
+}
+
+/* Active page styling */
+.pagination .page-item.active .page-link {
+    background-color: #c71585; /* Active page background color */
+    color: #ffffff; /* Active page text color */
+    border-color: #ffffff; /* Active page border color */
+}
+
+/* Disabled pagination links */
+.pagination .page-item.disabled .page-link {
+    color: #6c757d; /* Gray color for disabled links */
+    pointer-events: none;
+    background-color: #e9ecef; /* Light gray background */
+    border-color: #dee2e6; /* Border color */
+}
