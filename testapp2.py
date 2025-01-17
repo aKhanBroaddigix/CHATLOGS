@@ -104,17 +104,22 @@ def chats_per_club():
         # Map usernames to clubs
         club_counts = {}
         for item in chat_data:
-            username = item["_id"]
-            count = item["count"]
-            club = club_mapping.get(username, "Unknown Club")
-            club_counts[club] = club_counts.get(club, 0) + count
+            username = item.get("_id")
+            if not username:  # Skip if username is missing
+                continue
+
+            # Check if the username exists in the club mapping
+            club = club_mapping.get(username)
+            if club:  # Only add to the count if the club exists
+                count = item["count"]
+                club_counts[club] = club_counts.get(club, 0) + count
 
         # Format data for the frontend
         formatted_data = [{"club": club, "count": count} for club, count in club_counts.items()]
         return jsonify(formatted_data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route("/filter-charts", methods=["POST"])
 def filter_charts():
     data = request.get_json()
@@ -347,41 +352,61 @@ def search_usernames():
     return jsonify(results)
 
 
-
 @app.route("/get-chats-by-date-and-users", methods=["POST", "GET"])
 def get_chats_by_date_and_users():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
-    start_date = request.form.get("start_date", "").strip() if request.method == "POST" else request.args.get("start_date", "").strip()
-    end_date = request.form.get("end_date", "").strip() if request.method == "POST" else request.args.get("end_date", "").strip()
-    username = request.form.get("username", "").strip() if request.method == "POST" else request.args.get("username", "").strip()
-    page = int(request.args.get("page", 1))
+    # Get parameters
+    start_date = request.form.get("start_date", "") if request.method == "POST" else request.args.get("start_date", "")
+    end_date = request.form.get("end_date", "") if request.method == "POST" else request.args.get("end_date", "")
+    username = request.form.get("username", "") if request.method == "POST" else request.args.get("username", "")
+    
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except ValueError:
+        page = 1
+    
     items_per_page = 15
     skip_items = (page - 1) * items_per_page
 
+    # Build query criteria
     criteria = {"chats.username": {"$exists": True, "$ne": ""}}
     if username:
         criteria["chats.username"] = {"$regex": f"^{username.strip()}$", "$options": "i"}
 
+    # Handle date filtering
     try:
         if start_date and end_date:
-            date_start = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ)
-            date_end = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ) + timedelta(days=1)
+            date_start = datetime.strptime(start_date.strip(), "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ)
+            date_end = datetime.strptime(end_date.strip(), "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ) + timedelta(days=1)
             criteria["timestamp"] = {"$gte": date_start, "$lt": date_end}
         elif start_date:
-            date_start = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ)
+            date_start = datetime.strptime(start_date.strip(), "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ)
             criteria["timestamp"] = {"$gte": date_start}
         elif end_date:
-            date_end = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ) + timedelta(days=1)
+            date_end = datetime.strptime(end_date.strip(), "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ) + timedelta(days=1)
             criteria["timestamp"] = {"$lt": date_end}
     except ValueError:
         flash("Invalid date format. Please use YYYY-MM-DD.")
         return redirect(url_for("get_chats_by_date_and_users"))
 
-    all_documents = list(messages_collection.find(criteria).sort("timestamp", -1).skip(skip_items).limit(items_per_page))
+    # Get total count first
     total_chats = messages_collection.count_documents(criteria)
+    total_pages = max(1, (total_chats + items_per_page - 1) // items_per_page)
 
+    # Adjust page number if it exceeds total pages
+    if page > total_pages:
+        page = total_pages
+        skip_items = (page - 1) * items_per_page
+
+    # Get paginated results
+    all_documents = list(messages_collection.find(criteria)
+                        .sort("timestamp", -1)
+                        .skip(skip_items)
+                        .limit(items_per_page))
+
+    # Process chat data
     chats = []
     for document in all_documents:
         chats_data = document.get("chats", {})
@@ -409,8 +434,6 @@ def get_chats_by_date_and_users():
                 "date": formatted_date,
             })
 
-    total_pages = (total_chats + items_per_page - 1) // items_per_page
-
     return render_template(
         "chats_by_date_and_users.html",
         chats=chats,
@@ -419,8 +442,9 @@ def get_chats_by_date_and_users():
         username=username,
         page=page,
         total_pages=total_pages,
+        max=max,  # Add this
+        min=min  
     )
-
 @app.route("/download-chats-by-date-and-users", methods=["GET"])
 def download_chats_by_date_and_users():
     if not session.get("logged_in"):
@@ -748,8 +772,8 @@ def get_all_chats():
 
 
 
-@app.route("/api/line_chart_data", methods=["POST"])
-def line_chart_data():
+# @app.route("/api/line_chart_data", methods=["POST"])
+# def line_chart_data():
     data = request.get_json()
     filter_option = data.get("filter", "")
     start_date = data.get("startDate", "")
@@ -787,6 +811,86 @@ def line_chart_data():
         return jsonify(line_chart_data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/line_chart_data", methods=["POST"])
+def line_chart_data():
+    data = request.get_json()
+    filter_option = data.get("filter", "")
+    start_date = data.get("startDate", "")
+    end_date = data.get("endDate", "")
+
+    if filter_option == "custom" and start_date and end_date:
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ).astimezone(UTC)
+        end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ).astimezone(UTC) + timedelta(days=1)
+    else:
+        start_date, end_date = get_date_range(filter_option)
+
+    if not start_date or not end_date:
+        return jsonify({"error": "Invalid date filter"}), 400
+
+    start_date_utc = start_date.astimezone(UTC)
+    end_date_utc = end_date.astimezone(UTC)
+
+    try:
+        print(f"Filter: {filter_option}, Start: {start_date_utc}, End: {end_date_utc}")  # Debugging
+
+        # Check if the selected filter is for a single day
+        if filter_option in ["today", "yesterday"] or (start_date.date() == end_date.date()):
+            # Group by hour if it's a single day
+            pipeline = [
+                {"$match": {
+                    "timestamp": {"$gte": start_date_utc, "$lt": end_date_utc},
+                    "chats.username": {"$exists": True, "$ne": ""}
+                }},
+                {
+                    "$project": {
+                        "hour": {"$hour": "$timestamp"}
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": "$hour",
+                        "count": {"$sum": 1}
+                    }
+                },
+                {"$sort": {"_id": 1}}
+            ]
+        else:
+            # Group by day for date ranges
+            pipeline = [
+                {"$match": {
+                    "timestamp": {"$gte": start_date_utc, "$lt": end_date_utc},
+                    "chats.username": {"$exists": True, "$ne": ""}
+                }},
+                {
+                    "$group": {
+                        "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+                        "count": {"$sum": 1}
+                    }
+                },
+                {"$sort": {"_id": 1}}
+            ]
+
+        print(f"Pipeline: {pipeline}")  # Debugging
+
+        line_chart_data = list(messages_collection.aggregate(pipeline))
+        print(f"Query Result: {line_chart_data}")  # Debugging
+
+        if filter_option in ["today", "yesterday"] or (start_date.date() == end_date.date()):
+            # Format the output for hours
+            formatted_data = [
+                {"_id": f"{str(data['_id']).zfill(2)}:00", "count": data["count"]}
+                for data in line_chart_data
+            ]
+            return jsonify(formatted_data)
+
+        return jsonify(line_chart_data)
+
+    except Exception as e:
+        print(f"Error: {e}")  # Log the error
+        return jsonify({"error": str(e)}), 500
+
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, debug=True)
