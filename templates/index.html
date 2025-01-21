@@ -31,8 +31,6 @@
         color: #333;
         font-family: Arial, sans-serif;
         background-color: #d8d1d1;
-
-
       }
 
       h1,
@@ -51,7 +49,7 @@
       body.dark-mode h3 {
         color: #c71585;
       }
-      body.dark-mode #dashborad_heading{
+      body.dark-mode #dashborad_heading {
         color: #ffffff !important;
       }
 
@@ -328,7 +326,7 @@
       .userwithchatdyas {
         border-radius: 8px;
         box-shadow: 4px 8px 8px hsl(4deg 0% 0% / 0.2);
-        margin-top:4rem;
+        margin-top: 4rem;
       }
 
       #toggle-dark-mode {
@@ -353,148 +351,134 @@
         background-color: transparent;
         /* Make background transparent */
       }
-      .box_show_heading{
-        margin-top:3.2rem;
+      .box_show_heading {
+        margin-top: 3.2rem;
       }
-      .navbar{
+      .navbar {
         background-color: #c71585;
       }
       /* Stats Cards Styling */
       .stats-card {
-          border: none;
-          border-left: 5px solid var(--primary-color);
-          /* Left border color */
-          transition: transform 0.2s ease-in-out;
-          color: #ffffff !important; /* Set font color to white */
+        border: none;
+        border-left: 5px solid var(--primary-color);
+        /* Left border color */
+        transition: transform 0.2s ease-in-out;
+        color: #ffffff !important; /* Set font color to white */
       }
-      
+
       .stats-card:hover {
-          transform: translateY(-5px);
-          /* Slight elevation on hover */
-          box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
-          /* Enhanced shadow on hover */
+        transform: translateY(-5px);
+        /* Slight elevation on hover */
+        box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+        /* Enhanced shadow on hover */
       }
-      
-      
-      
+
       .stats-card .card-body {
-          padding: 30px; /* Increased padding for better spacing */
+        padding: 30px; /* Increased padding for better spacing */
       }
-      
+
       .stats-card .card-title {
-          font-size: 1.2rem; /* Slightly larger title */
-          font-weight: bold;
-          margin-bottom: 10px;
+        font-size: 1.2rem; /* Slightly larger title */
+        font-weight: bold;
+        margin-bottom: 10px;
       }
-      
+
       .stats-card .card-value {
-          font-size: 3.5rem; /* Increased size for numbers */
-          font-weight: 900; /* Make numbers bold */
+        font-size: 3.5rem; /* Increased size for numbers */
+        font-weight: 900; /* Make numbers bold */
       }
-      
+
       .stats-card small {
-          font-size: 0.875rem;
-          color: #ffffff; /* Set small text color to white */
+        font-size: 0.875rem;
+        color: #ffffff; /* Set small text color to white */
       }
-      
+
       .text-center {
-          text-align: center; /* Align all text in center */
+        text-align: center; /* Align all text in center */
       }
       #total-chats {
-        color:#ffffff;
+        color: #ffffff;
         font-size: 2rem;
       }
-      #total-tickets{
-        color:#ffffff;
+      #total-tickets {
+        color: #ffffff;
         font-size: 2rem;
       }
-      
     </style>
   </head>
 
   <body>
+    <!-- Navbar code -->
 
-<!-- Navbar code -->
-
-<nav class="navbar navbar-expand-lg navbar-light  shadow-sm">
-  <div class="container-fluid">
-    <!-- Logo or Brand Name -->
-    <a class="navbar-brand" href="#">
-      <img
-        src="{{ url_for('static', filename='frenwood-logo.png') }}"
-        alt="Logo"
-        width="100"
-        height="30"
-    
-        class="d-inline-block align-text-top ms-5"
-      />
-     
-    </a>
-
-    <!-- Toggler for responsive design -->
-    <button
-      class="navbar-toggler"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#navbarContent"
-      aria-controls="navbarContent"
-      aria-expanded="false"
-      aria-label="Toggle navigation"
-    >
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse" id="navbarContent">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        
-      </ul>
-
-      <!-- Date Filter -->
-      <div class="d-flex align-items-center">
-        <select id="date-filter" class="form-select me-2">
-          <option value="none">Select a Date Range</option>
-          <option value="today">Today</option>
-          <option value="yesterday">Yesterday</option>
-          <option value="this_week">This Week</option>
-          <option value="last_week">Last Week</option>
-          <option value="this_month">This Month</option>
-          <option value="last_month">Last Month</option>
-          <option value="custom">Custom</option>
-        </select>
-        <div id="custom-date-range" class="ms-2" style="display: none">
-          <input
-            type="text"
-            id="date-range"
-            class="form-control"
-            placeholder="Select Date Range"
+    <nav class="navbar navbar-expand-lg navbar-light shadow-sm">
+      <div class="container-fluid">
+        <!-- Logo or Brand Name -->
+        <a class="navbar-brand" href="#">
+          <img
+            src="{{ url_for('static', filename='frenwood-logo.png') }}"
+            alt="Logo"
+            width="100"
+            height="30"
+            class="d-inline-block align-text-top ms-5"
           />
-          <button id="apply-custom-filter" class="btn btn-primary">
-            Apply
+        </a>
+
+        <!-- Toggler for responsive design -->
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarContent"
+          aria-controls="navbarContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
+
+          <!-- Date Filter -->
+          <div class="d-flex align-items-center">
+            <select id="date-filter" class="form-select me-2">
+              <option value="none">Select a Date Range</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="last_week">Last Week</option>
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="custom">Custom</option>
+            </select>
+            <div id="custom-date-range" class="ms-2" style="display: none">
+              <input
+                type="text"
+                id="date-range"
+                class="form-control"
+                placeholder="Select Date Range"
+              />
+              <button id="apply-custom-filter" class="btn btn-primary">
+                Apply
+              </button>
+            </div>
+          </div>
+
+          <!-- Dark Mode Toggle -->
+          <button id="toggle-dark-mode" class="btn ms-3">
+            <i class="fas fa-sun"></i>
           </button>
         </div>
       </div>
+    </nav>
 
-      <!-- Dark Mode Toggle -->
-      <button id="toggle-dark-mode" class="btn ms-3">
-        <i class="fas fa-sun"></i>
-      </button>
-    </div>
-  </div>
-</nav>
-
-<!-- Navbar code end  -->
-    
-
-
-
-
-
+    <!-- Navbar code end  -->
 
     <div class="container mb-5 mt-3">
       <div class="row">
         <!-- Left Column -->
         <div class="col-md-8">
-         <!-- <h1 class="text-center mb-4 " id="dashborad_heading">Dashboard</h1>  -->
+          <!-- <h1 class="text-center mb-4 " id="dashborad_heading">Dashboard</h1>  -->
 
           <div class="chart-container">
             <div class="card chart-box">
@@ -530,7 +514,7 @@
               View All Chats
             </button>
           </div>
-       <!--   <div class="card  shadow-sm box_show_heading">
+          <!--   <div class="card  shadow-sm box_show_heading">
             <div
               id="total-chats-counter"
               class="d-flex justify-content-center align-items-center mt-4"
@@ -553,42 +537,48 @@
           </div>
 
         -->
-        <div class="row mt-4">
-          <!-- Total Messages Card -->
-          <div class="col-md-6">
-            <div class="card stats-card shadow-sm" style="background-color: #FE718F;">
-              <div class="card-body text-center">
-                <h6 class="card-title">Total Messages</h6>
-                <h1 class="card-value" id="total-chats">2165</h1>
+          <div class="row mt-4">
+            <!-- Total Messages Card -->
+            <div class="col-md-6">
+              <div
+                class="card stats-card shadow-sm"
+                style="background-color: #fe718f"
+              >
+                <div class="card-body text-center">
+                  <h6 class="card-title">Total Messages</h6>
+                  <h1 class="card-value" id="total-chats">2165</h1>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tickets Created Card -->
+            <div class="col-md-6">
+              <div
+                id="view-tickets-card"
+                class="card stats-card shadow-sm"
+                style="background-color: #6ad3d4; cursor: pointer"
+              >
+                <div class="card-body text-center">
+                  <h6 class="card-title">Tickets Created</h6>
+                  <h1 class="card-value" id="total-tickets">117</h1>
+                </div>
               </div>
             </div>
           </div>
-
-          <!-- Tickets Created Card -->
-          <div class="col-md-6">
-            <div class="card stats-card shadow-sm" style="background-color: #6AD3D4;">
-              <div class="card-body text-center">
-                <h6 class="card-title">Tickets Created</h6>
-                <h1 class="card-value" id="total-tickets">117</h1>
-              </div>
-            </div>
-          </div>
-        </div>
-
 
           <div class="chart-container">
             <!-- Top Chat Contributors Chart -->
             <!-- <div class="card chart-box"> -->
 
             <div class="chart-box-no-style">
-             <!-- <h3 class="text-center" style="color: #c71585; padding-top: 1rem">
+              <!-- <h3 class="text-center" style="color: #c71585; padding-top: 1rem">
                 Top Chat Contributors
               </h3>-->
               <canvas id="topChatContributorsChart"></canvas>
             </div>
           </div>
           <div class="userwithchatdyas">
-            <div class="card p-4 shadow-sm ">
+            <div class="card p-4 shadow-sm">
               <h3 class="text-center" style="color: #c71585">
                 Users with Chat Days
               </h3>
@@ -624,6 +614,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
+      const globalDateRange = {
+        startDate: null,
+        endDate: null,
+      };
       // create two variable for total chats and total tickets
       var totalChats = 0;
       var totalTickets = 0;
@@ -741,18 +735,33 @@
         .addEventListener("click", () => {
           const dateRangeInput = document.getElementById("date-range").value;
           const [startDate, endDate] = dateRangeInput.split(" to ");
-
+        
           if (startDate && endDate) {
+            // Store the dates in localStorage
+            localStorage.setItem("startDate", startDate);
+            localStorage.setItem("endDate", endDate);
+        
+            console.log("Dates stored in localStorage:", {
+              startDate: localStorage.getItem("startDate"),
+              endDate: localStorage.getItem("endDate"),
+            });
+        
             // Apply the custom date filter
             applyDateFilter("custom", startDate, endDate);
-
+        
             // Hide the custom date range input after applying
             document.getElementById("custom-date-range").style.display = "none";
           } else {
             console.error("Invalid date range selected.");
             alert("Please select a valid date range.");
           }
+          console.log("Dates stored in localStorage:", {
+            startDate: localStorage.getItem("startDate"),
+            endDate: localStorage.getItem("endDate"),
+          });
+      
         });
+        
 
       function applyDateFilter(filter, startDate = null, endDate = null) {
         const requestBody = { filter, startDate, endDate };
@@ -817,6 +826,8 @@
             console.error("Error fetching data:", error);
           });
       }
+      
+      
 
       // Fetch line graph data and update chart
       function fetchLineGraphData(filter, startDate = null, endDate = null) {
@@ -1168,6 +1179,7 @@
                   case "today":
                     startDate = today.toISOString().split("T")[0]; // Today's date
                     endDate = today.toISOString().split("T")[0]; // Same as start date
+                 
                     break;
 
                   case "yesterday":
@@ -1333,7 +1345,7 @@
           totalTickets,
         };
 
-        fetch("/export-filtered-data", {
+        fetch("/export-filtered-data-homepage", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
@@ -1367,6 +1379,64 @@
           window.location.href =
             window.location.origin + "/get-chats-by-date-and-users";
         });
+
+      // code for redirect into and show ticket generation code
+      document.getElementById("view-tickets-card").addEventListener("click", async function () {
+        const selectedFilter = document.getElementById("date-filter").value;
+        console.log("Selected filter:", selectedFilter);
+    
+        try {
+            // Show loading state
+            this.disabled = true;
+            
+            // Fetch start and end dates
+            const dateRangeResponse = await fetch("/api/date-range", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ filter: selectedFilter }),
+            });
+    
+            if (!dateRangeResponse.ok) {
+                throw new Error(`Failed to fetch date range: ${dateRangeResponse.statusText}`);
+            }
+    
+            const dateRangeData = await dateRangeResponse.json();
+            console.log("Date range data:", dateRangeData); // Debug log
+    
+            if (dateRangeData.error) {
+                throw new Error(dateRangeData.error);
+            }
+    
+            if (!dateRangeData.startDate || !dateRangeData.endDate) {
+                throw new Error("Invalid date range received");
+            }
+    
+            // Build query parameters
+            const params = new URLSearchParams({
+                start_date: dateRangeData.startDate,
+                end_date: dateRangeData.endDate,
+                ticket: "Ticket generated successfully!"
+            });
+    
+            // Log the final URL for debugging
+            const finalUrl = `/get-chats-by-date-and-userss?${params.toString()}`;
+            console.log("Redirecting to:", finalUrl);
+    
+         window.location.href = finalUrl;
+    
+        } catch (error) {
+            console.error("Error handling the request:", error);
+            alert(`An error occurred: ${error.message}`);
+        } finally {
+            this.disabled = false;
+        }
+    });
+
+
+
+
     </script>
   </body>
 </html>
