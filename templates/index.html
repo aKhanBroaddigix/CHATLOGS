@@ -1417,11 +1417,11 @@
             const params = new URLSearchParams({
                 start_date: dateRangeData.startDate,
                 end_date: dateRangeData.endDate,
-                ticket: "Ticket generated successfully!"
+                ticket_generation_success: "on"
             });
     
             // Log the final URL for debugging
-            const finalUrl = `/get-chats-by-date-and-userss?${params.toString()}`;
+            const finalUrl = `/get-chats-by-date-and-users?${params.toString()}`;
             console.log("Redirecting to:", finalUrl);
     
          window.location.href = finalUrl;
