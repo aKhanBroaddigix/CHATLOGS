@@ -29,48 +29,33 @@
         color: #333;
         font-family: Arial, sans-serif;
       }
-     
     </style>
   </head>
   <body>
+    <!-- Navbar code -->
 
+    <nav class="navbar navbar-expand-lg navbar-light shadow-sm">
+      <div class="container-fluid">
+        <!-- Logo or Brand Name -->
+        <a class="navbar-brand" href="#">
+          <img
+            src="{{ url_for('static', filename='frenwood-logo.png') }}"
+            alt="Logo"
+            width="100"
+            height="30"
+            class="d-inline-block align-text-top ms-5"
+          />
+        </a>
 
+        <!-- Toggler for responsive design -->
+      </div>
+    </nav>
 
-<!-- Navbar code -->
-
-<nav class="navbar navbar-expand-lg navbar-light  shadow-sm">
-  <div class="container-fluid">
-    <!-- Logo or Brand Name -->
-    <a class="navbar-brand" href="#">
-      <img
-        src="{{ url_for('static', filename='frenwood-logo.png') }}"
-        alt="Logo"
-        width="100"
-        height="30"
-    
-        class="d-inline-block align-text-top ms-5"
-      />
-     
-    </a>
-
-    <!-- Toggler for responsive design -->
-    
-
-    
-  </div>
-</nav>
-
-<!-- Navbar code end  -->
-    
-
-
+    <!-- Navbar code end  -->
 
     <!-- Back Icon -->
-  
 
     <div class="container my-5">
-     
-
       <div class="filter-container">
         <form
           id="filter-form"
@@ -129,11 +114,20 @@
               </div>
               <div id="dropdown-content" class="dropdown-content">
                 <!-- User checkboxes will be dynamically loaded here -->
-              
               </div>
             </div>
           </div>
-
+          <div class="form-check me-4">
+            <input
+              type="checkbox"
+              id="ticket-generation-checkbox"
+              name="ticket_generation_success"
+              class="form-check-input"
+            />
+            <label for="ticket-generation-checkbox" class="form-check-label">
+              Ticket Chats
+            </label>
+          </div>
           <!-- Filter Button -->
           <button type="submit" class="btn btn-primary">Search</button>
         </form>
@@ -169,72 +163,85 @@
       <!-- Pagination -->
       <!-- Pagination -->
       <!-- Pagination -->
+
       <div class="text-center mt-4">
         <nav aria-label="Page navigation">
           <ul class="pagination justify-content-center">
             <!-- Previous button -->
             {% if page > 1 %}
             <li class="page-item">
-              <a
-                class="page-link"
-                href="{{ url_for('get_chats_by_date_and_users', start_date=start_date, end_date=end_date, username=username, page=page-1) }}"
-              >
+              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+                start_date=start_date, 
+                end_date=end_date, 
+                username=username, 
+                page=page-1,
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
                 Previous
               </a>
             </li>
             {% endif %}
-
+      
             <!-- First page -->
             {% if page > 3 %}
             <li class="page-item">
-              <a
-                class="page-link"
-                href="{{ url_for('get_chats_by_date_and_users', start_date=start_date, end_date=end_date, username=username, page=1) }}"
-                >1</a
-              >
+              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+                start_date=start_date, 
+                end_date=end_date, 
+                username=username, 
+                page=1,
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
+                1
+              </a>
             </li>
             {% if page > 4 %}
             <li class="page-item disabled">
               <span class="page-link">...</span>
             </li>
-            {% endif %} {% endif %}
-
+            {% endif %}
+            {% endif %}
+      
             <!-- Page numbers -->
-            {% for page_num in range(max(1, page-2), min(total_pages+1, page+3))
-            %}
+            {% for page_num in range(max(1, page-2), min(total_pages+1, page+3)) %}
             <li class="page-item {% if page_num == page %}active{% endif %}">
-              <a
-                class="page-link"
-                href="{{ url_for('get_chats_by_date_and_users', start_date=start_date, end_date=end_date, username=username, page=page_num) }}"
-              >
+              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+                start_date=start_date, 
+                end_date=end_date, 
+                username=username, 
+                page=page_num,
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
                 {{ page_num }}
               </a>
             </li>
             {% endfor %}
-
+      
             <!-- Last pages -->
-            {% if page < total_pages-2 %} {% if page < total_pages-3 %}
+            {% if page < total_pages-2 %}
+            {% if page < total_pages-3 %}
             <li class="page-item disabled">
               <span class="page-link">...</span>
             </li>
             {% endif %}
             <li class="page-item">
-              <a
-                class="page-link"
-                href="{{ url_for('get_chats_by_date_and_users', start_date=start_date, end_date=end_date, username=username, page=total_pages) }}"
-              >
+              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+                start_date=start_date, 
+                end_date=end_date, 
+                username=username, 
+                page=total_pages,
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
                 {{ total_pages }}
               </a>
             </li>
             {% endif %}
-
+      
             <!-- Next button -->
             {% if page < total_pages %}
             <li class="page-item">
-              <a
-                class="page-link"
-                href="{{ url_for('get_chats_by_date_and_users', start_date=start_date, end_date=end_date, username=username, page=page+1) }}"
-              >
+              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+                start_date=start_date, 
+                end_date=end_date, 
+                username=username, 
+                page=page+1,
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
                 Next
               </a>
             </li>
@@ -242,7 +249,6 @@
           </ul>
         </nav>
       </div>
-
       <!-- Download Button -->
       <!-- Replace the existing Download Button section -->
       <div class="text-center mt-4">
@@ -281,7 +287,8 @@
         const startDate = getQueryParam("start_date");
         const endDate = getQueryParam("end_date");
         const username = getQueryParam("username");
-
+        const ticketGenerationSuccess = getQueryParam("ticket_generation_success");
+    
         if (startDate && endDate) {
           console.log(`Start Date: ${startDate}`);
           console.log(`End Date: ${endDate}`);
@@ -368,9 +375,11 @@
         // Handle select all checkbox
         selectAllCheckbox.addEventListener("change", (e) => {
           const isAllSelected = e.target.checked;
-          const checkboxes = dropdownContent.querySelectorAll('input[type="checkbox"]');
+          const checkboxes = dropdownContent.querySelectorAll(
+            'input[type="checkbox"]'
+          );
           checkboxes.forEach((checkbox) => (checkbox.checked = isAllSelected));
-      
+
           if (isAllSelected) {
             usernameInput.value = ""; // Clear the actual value
             usernameInput.placeholder = "All Users Selected"; // Show as placeholder
@@ -380,9 +389,9 @@
             usernameInput.placeholder = "Enter user name";
             usernameInput.setAttribute("data-all-selected", "false");
           }
-      
+
           // Automatically close the dropdown after "Select All"
-      //    dropdown.classList.add("hidden");
+          //    dropdown.classList.add("hidden");
         });
         // Handle individual checkbox changes
         dropdownContent.addEventListener("change", (e) => {
@@ -478,6 +487,16 @@
 
           const formData = new FormData(filterForm);
           const searchParams = new URLSearchParams(formData);
+
+          // Get the checkbox state
+          const ticketGenerationCheckbox = document.getElementById(
+            "ticket-generation-checkbox"
+          );
+          if (ticketGenerationCheckbox.checked) {
+            searchParams.set("ticket_generation_success", "on");
+          } else {
+            searchParams.delete("ticket_generation_success");
+          }
 
           if (globalStartDate && globalEndDate) {
             searchParams.set("start_date", globalStartDate);
@@ -622,12 +641,19 @@
         .getElementById("download-csv")
         .addEventListener("click", async () => {
           // Validate global variables for dates
+
+
+          const ticketGenerationSuccess = getQueryParam("ticket_generation_success");
+
+          // Debugging: Display the parameter in an alert
+          
           if (!globalStartDate || !globalEndDate) {
             window.location.href = `export-all-data`;
             showAlert("Download Complete Chat History", "success");
             //   showAlert("Please select a date range before downloading", "warning");
             return;
           }
+       
 
           console.log("Global Username:", globalUsername);
 
@@ -658,6 +684,7 @@
               filter: document.getElementById("date-filter").value,
               startDate: globalStartDate,
               endDate: globalEndDate,
+              ticketGenerationSuccess: ticketGenerationSuccess === "on",
               username: username,
               totalChats: 0, // You can update these values as needed
               totalTickets: 0,
@@ -712,7 +739,11 @@
             downloadBtn.disabled = false;
           }
         });
-     
+
+
+
+
+
     </script>
   </body>
 </html>
