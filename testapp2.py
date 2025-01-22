@@ -7,11 +7,36 @@ import csv
 from pytz import timezone, UTC
 import pytz
 import logging
+from logging.handlers import RotatingFileHandler
 from itertools import zip_longest
+import os
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = 'dev'  # Needed for session management
 
+
+
+# Create logs directory if it doesn't exist
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
+# Configure logging before creating the Flask app
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Create a file handler
+file_handler = RotatingFileHandler(
+    'logs/app.log',
+    maxBytes=10240000,  # 10MB
+    backupCount=10
+)
+file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+file_handler.setFormatter(formatter)
 logging.basicConfig(
     filename="app.log",  # Log file name
     level=logging.DEBUG,  # Set log level to DEBUG (can change to INFO, WARNING, etc.)
@@ -485,20 +510,31 @@ def get_chats_by_date_and_users():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
-    # Get parameters
+    # Get parameters with detailed logging
     start_date = request.form.get("start_date", "") if request.method == "POST" else request.args.get("start_date", "")
     end_date = request.form.get("end_date", "") if request.method == "POST" else request.args.get("end_date", "")
     username = request.form.get("username", "") if request.method == "POST" else request.args.get("username", "")
+    ticket_generation_success = request.form.get("ticket_generation_success") if request.method == "POST" else request.args.get("ticket_generation_success")
+
+    # Log all incoming parameters
+    app.logger.info("=== Request Parameters ===")
+    app.logger.info(f"Method: {request.method}")
+    app.logger.info(f"start_date: {start_date}")
+    app.logger.info(f"end_date: {end_date}")
+    app.logger.info(f"username: {username}")
+    app.logger.info(f"ticket_generation_success: {ticket_generation_success}")
+    app.logger.info("=======================")
 
     try:
         page = max(1, int(request.args.get("page", 1)))
     except ValueError:
         page = 1
+        app.logger.warning(f"Invalid page parameter, defaulting to 1")
 
     items_per_page = 15
     skip_items = (page - 1) * items_per_page
 
-    # Build query criteria
+    # Build base query criteria
     criteria = {"chats.username": {"$exists": True, "$ne": ""}}
 
     # Handle multiple usernames
@@ -515,30 +551,46 @@ def get_chats_by_date_and_users():
             date_start = datetime.strptime(start_date.strip(), "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ)
             date_end = datetime.strptime(end_date.strip(), "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ) + timedelta(days=1)
             criteria["timestamp"] = {"$gte": date_start, "$lt": date_end}
+            app.logger.info(f"Date range filter applied: {date_start} to {date_end}")
         elif start_date:
             date_start = datetime.strptime(start_date.strip(), "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ)
             criteria["timestamp"] = {"$gte": date_start}
+            app.logger.info(f"Start date filter applied: {date_start}")
         elif end_date:
             date_end = datetime.strptime(end_date.strip(), "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ) + timedelta(days=1)
             criteria["timestamp"] = {"$lt": date_end}
-    except ValueError:
+            app.logger.info(f"End date filter applied: {date_end}")
+    except ValueError as e:
+        app.logger.error(f"Date parsing error: {e}")
         flash("Invalid date format. Please use YYYY-MM-DD.")
         return redirect(url_for("get_chats_by_date_and_users"))
 
-    # Get total count first
-    total_chats = messages_collection.count_documents(criteria)
-    total_pages = max(1, (total_chats + items_per_page - 1) // items_per_page)
+    # Add ticket generation filter with the correct logic from the second code
+    if ticket_generation_success == "on":
+        app.logger.info("Applying ticket generation filter")
+        criteria["chats.messages.content"] = {"$regex": "Ticket generated successfully!", "$options": "i"}
+        criteria["chats.questions"] = {"$regex": "Yes Generate", "$options": "i"}
+        app.logger.info(f"Final MongoDB criteria with ticket filter: {criteria}")
 
-    # Adjust page number if it exceeds total pages
+    # Log the final query criteria
+    app.logger.info(f"Final MongoDB query criteria: {criteria}")
+
+    # Get total count and handle pagination
+    total_chats = messages_collection.count_documents(criteria)
+    app.logger.info(f"Total matching documents found: {total_chats}")
+
+    total_pages = max(1, (total_chats + items_per_page - 1) // items_per_page)
     if page > total_pages:
         page = total_pages
         skip_items = (page - 1) * items_per_page
 
-    # Get paginated results
+    # Fetch paginated results
     all_documents = list(messages_collection.find(criteria)
                         .sort("timestamp", -1)
                         .skip(skip_items)
                         .limit(items_per_page))
+    
+    app.logger.info(f"Retrieved {len(all_documents)} documents after pagination")
 
     # Process chat data
     chats = []
@@ -560,13 +612,26 @@ def get_chats_by_date_and_users():
         adjusted_time = adjust_timestamp(timestamp) if timestamp else None
         formatted_date = adjusted_time.strftime("%d-%b-%Y %I:%M %p") if adjusted_time else "Unknown Date"
 
-        for question, message in zip(questions, messages):
+        for question, message in zip_longest(questions, messages, fillvalue=None):
+            if message is None:
+                continue
+
+            # Use the correct ticket generation check from the second code
+            if ticket_generation_success == "on":
+                if not (
+                    "Ticket generated successfully!" in message.get("content", "") and
+                    question and "Yes Generate" in question
+                ):
+                    continue
+
             chats.append({
                 "username": chat_username,
                 "question": question or "No question",
                 "answer": message.get("content", "No answer"),
                 "date": formatted_date,
             })
+
+    app.logger.info(f"Final number of processed chats: {len(chats)}")
 
     return render_template(
         "chats_by_date_and_users.html",
@@ -577,120 +642,12 @@ def get_chats_by_date_and_users():
         page=page,
         total_pages=total_pages,
         max=max,
-        min=min  
+        min=min,
+        ticket_generation_success=ticket_generation_success
     )
 
 
-
-
-
-@app.route("/download-chats-by-date-and-users", methods=["GET"])
-def download_chats_by_date_and_users():
-    if not session.get("logged_in"):
-        return redirect(url_for("login"))
-
-    # Get parameters from request
-    start_date = request.args.get("start_date", "").strip()
-    end_date = request.args.get("end_date", "").strip()
-    username = request.args.get("username", "").strip()
-
-    # Validate dates
-    if not start_date or not end_date:
-        flash("Please select both start date and end date", "error")
-        return redirect(url_for('get_chats_by_date_and_users', 
-                              start_date=start_date,
-                              end_date=end_date,
-                              username=username))
-
-    try:
-        # Convert dates to datetime objects with timezone
-        date_start = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ)
-        date_end = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=MELBOURNE_TZ) + timedelta(days=1)
-        
-        # Validate date range
-        if date_end <= date_start:
-            flash("End date must be after start date", "error")
-            return redirect(url_for('get_chats_by_date_and_users',
-                                  start_date=start_date,
-                                  end_date=end_date,
-                                  username=username))
-
-        # Create query criteria
-        criteria = {
-            "timestamp": {"$gte": date_start, "$lt": date_end}, 
-            "chats.username": {"$exists": True, "$ne": ""}
-        }
-        
-        if username:
-            criteria["chats.username"] = {"$regex": f"^{username}$", "$options": "i"}
-
-        # Fetch documents
-        all_documents = list(messages_collection.find(criteria).sort("timestamp", -1))
-        
-        if not all_documents:
-            flash("No data found for the selected date range", "warning")
-            return redirect(url_for('get_chats_by_date_and_users',
-                                  start_date=start_date,
-                                  end_date=end_date,
-                                  username=username))
-
-        # Process documents
-        chats = []
-        for document in all_documents:
-            chats_data = document.get("chats", {})
-            chat_username = chats_data.get("username", "N/A")
-            if chat_username == "N/A":
-                continue
-
-            questions = chats_data.get("questions", [])
-            if isinstance(questions, str):
-                questions = [questions]
-
-            messages = chats_data.get("messages", [])
-            if isinstance(messages, dict):
-                messages = [messages]
-
-            timestamp = document.get("timestamp")
-            adjusted_time = adjust_timestamp(timestamp) if timestamp else None
-            formatted_date = adjusted_time.strftime("%d-%b-%Y %I:%M %p") if adjusted_time else "Unknown Date"
-
-            for question, message in zip(questions, messages):
-                chats.append({
-                    "username": chat_username,
-                    "date": formatted_date,
-                    "question": question or "No question",
-                    "answer": message.get("content", "No answer"),
-                })
-
-        # Create CSV file
-        df = pd.DataFrame(chats)
-        output = BytesIO()
-        df.to_csv(output, index=False, encoding="utf-8")
-        output.seek(0)
-
-        # Generate filename with date range
-        filename = f"chats_{start_date}_to_{end_date}.csv"
-
-        return send_file(
-            output,
-            mimetype="text/csv",
-            as_attachment=True,
-            download_name=filename
-        )
-
-    except ValueError as e:
-        flash("Invalid date format. Please use YYYY-MM-DD format", "error")
-        return redirect(url_for('get_chats_by_date_and_users',
-                              start_date=start_date,
-                              end_date=end_date,
-                              username=username))
-        
-    except Exception as e:
-        flash(f"An error occurred: {str(e)}", "error")
-        return redirect(url_for('get_chats_by_date_and_users',
-                              start_date=start_date,
-                              end_date=end_date,
-                              username=username))
+#downlaod csv file
 @app.route("/export-filtered-data", methods=["POST"])
 def export_filtered_data():
     try:
@@ -702,6 +659,14 @@ def export_filtered_data():
         start_date = data.get("startDate", "")
         end_date = data.get("endDate", "")
         username = data.get("username", "").strip()
+        ticket_generation_success = data.get("ticketGenerationSuccess")
+
+        app.logger.info("=== Export Request Parameters ===")
+        app.logger.info(f"start_date: {start_date}")
+        app.logger.info(f"end_date: {end_date}")
+        app.logger.info(f"username: {username}")
+        app.logger.info(f"ticket_generation_success: {ticket_generation_success}")
+        app.logger.info("===============================")
 
         # Validate required parameters
         if not start_date or not end_date:
@@ -735,6 +700,15 @@ def export_filtered_data():
             else:
                 criteria["chats.username"] = {"$regex": f"^{usernames[0]}$", "$options": "i"}
 
+        # Add ticket generation filter if enabled
+        if ticket_generation_success:
+            app.logger.info("Applying ticket generation filter")
+            criteria["chats.messages.content"] = {"$regex": "Ticket generated successfully!", "$options": "i"}
+            criteria["chats.questions"] = {"$regex": "Yes Generate", "$options": "i"}
+            app.logger.info(f"Final MongoDB criteria with ticket filter: {criteria}")
+
+        app.logger.info(f"Final MongoDB query criteria: {criteria}")
+
         # Fetch and process data
         rows = []
         cursor = messages_collection.find(criteria)
@@ -764,7 +738,7 @@ def export_filtered_data():
                 messages = [messages]
 
             # Process each Q&A pair
-            for question, message in zip(questions, messages):
+            for question, message in zip_longest(questions, messages, fillvalue=None):
                 if not question or not message:
                     continue
 
@@ -772,14 +746,28 @@ def export_filtered_data():
                 if not answer_content:
                     continue
 
-                # Truncate long fields for readability
-                max_length = 50  # Max characters to display in CSV
-                rows.append({
-                    "Date": formatted_date,
-                    "Username": chat_username,
-                    "Question": (question[:max_length] + '...') if len(question) > max_length else question,
-                    "Answer": (answer_content[:max_length] + '...') if len(answer_content) > max_length else answer_content
-                })
+                # For ticket generation messages, store the complete message
+                if ticket_generation_success:
+                    if ("Ticket generated successfully!" in answer_content and
+                        "Yes Generate" in question):
+                        rows.append({
+                            "Date": formatted_date,
+                            "Username": chat_username,
+                            "Question": question,  # Store complete question
+                            "Answer": answer_content  # Store complete answer without truncation
+                        })
+                else:
+                    # For non-ticket messages, truncate if too long
+                    max_length = 50
+                    truncated_question = (question[:max_length] + '...') if len(question) > max_length else question
+                    truncated_answer = (answer_content[:max_length] + '...') if len(answer_content) > max_length else answer_content
+                    
+                    rows.append({
+                        "Date": formatted_date,
+                        "Username": chat_username,
+                        "Question": truncated_question,
+                        "Answer": truncated_answer
+                    })
 
         if not rows:
             return jsonify({"error": "No data found for the specified criteria"}), 404
@@ -792,8 +780,9 @@ def export_filtered_data():
         df.to_csv(output, index=False, encoding="utf-8-sig")  # utf-8-sig for Excel compatibility
         output.seek(0)
 
-        # Generate filename
-        filename = f"chat_data_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
+        # Generate filename with ticket indication if applicable
+        filename_prefix = "ticket_chats" if ticket_generation_success else "chat_data"
+        filename = f"{filename_prefix}_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
 
         return send_file(
             output,
@@ -805,10 +794,6 @@ def export_filtered_data():
     except Exception as e:
         app.logger.error(f"Error in export_filtered_data: {str(e)}", exc_info=True)
         return jsonify({"error": "An unexpected error occurred while processing your request"}), 500
-
-
-
-
 
 # home page chat-download endpoint
 @app.route("/export-filtered-data-homepage", methods=["POST"])
@@ -1196,6 +1181,77 @@ def get_chats_with_tickets():
         app.logger.error(f"Error in get_chats_with_tickets: {str(e)}", exc_info=True)
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
+# @app.route("/api/date-range", methods=["GET", "POST"])
+# def date_range():
+#     SYDNEY_TZ = timezone("Australia/Sydney")
+
+#     # Helper function to calculate date range
+#     def calculate_date_range(filter_option, start_date=None, end_date=None):
+#         now = datetime.now(SYDNEY_TZ)
+
+#         if filter_option == "today":
+#             start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+#             end_date = start_date + timedelta(days=1)
+#         elif filter_option == "yesterday":
+#             end_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+#             start_date = end_date - timedelta(days=1)
+#         elif filter_option == "this_week":
+#             start_date = now - timedelta(days=now.weekday())
+#             start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+#             end_date = start_date + timedelta(days=7)
+#         elif filter_option == "last_week":
+#             end_date = now - timedelta(days=now.weekday())
+#             start_date = end_date - timedelta(days=7)
+#         elif filter_option == "this_month":
+#             start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)  # Start of this month
+#             end_date = (start_date + timedelta(days=31)).replace(day=1)  # Start of next month
+
+#         elif filter_option == "last_month":
+#             first_day_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+#             end_date = first_day_this_month  # Start of this month
+#             start_date = (first_day_this_month - timedelta(days=1)).replace(day=1)  # Start of last month
+
+#         elif filter_option == "custom":
+#             if start_date and end_date:
+#                 start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=SYDNEY_TZ)
+#                 end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=SYDNEY_TZ) + timedelta(days=1)
+#         else:
+#             raise ValueError("Custom filter requires startDate and endDate")
+           
+
+#         return start_date, end_date
+
+#     try:
+#         if request.method == "POST":
+#             data = request.get_json()
+#             filter_option = data.get("filter", "")
+#             start_date = data.get("startDate", None)
+#             end_date = data.get("endDate", None)
+#         else:  # GET method
+#             filter_option = request.args.get("filter", "")
+#             start_date = request.args.get("startDate", None)
+#             end_date = request.args.get("endDate", None)
+
+#         # Calculate date range
+#         start_date, end_date = calculate_date_range(filter_option, start_date, end_date)
+
+#         # Convert to UTC for standardization
+#         start_date_utc = start_date.astimezone(UTC)
+#         end_date_utc = end_date.astimezone(UTC)
+
+#         # Format the response
+#         response = {
+#             "filter": filter_option,
+#             "startDate": start_date_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+#             "endDate": end_date_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+#         }
+#         return jsonify(response), 200
+
+#     except ValueError as e:
+#         return jsonify({"error": str(e)}), 400
+#     except Exception as e:
+#         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+
 @app.route("/api/date-range", methods=["GET", "POST"])
 def date_range():
     SYDNEY_TZ = timezone("Australia/Sydney")
@@ -1220,19 +1276,16 @@ def date_range():
         elif filter_option == "this_month":
             start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)  # Start of this month
             end_date = (start_date + timedelta(days=31)).replace(day=1)  # Start of next month
-
         elif filter_option == "last_month":
             first_day_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             end_date = first_day_this_month  # Start of this month
             start_date = (first_day_this_month - timedelta(days=1)).replace(day=1)  # Start of last month
-
         elif filter_option == "custom":
             if start_date and end_date:
                 start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=SYDNEY_TZ)
                 end_date = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=SYDNEY_TZ) + timedelta(days=1)
         else:
             raise ValueError("Custom filter requires startDate and endDate")
-           
 
         return start_date, end_date
 
@@ -1254,11 +1307,11 @@ def date_range():
         start_date_utc = start_date.astimezone(UTC)
         end_date_utc = end_date.astimezone(UTC)
 
-        # Format the response
+        # Format the response to include only the date
         response = {
             "filter": filter_option,
-            "startDate": start_date_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "endDate": end_date_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+            "startDate": start_date_utc.strftime("%Y-%m-%d"),
+            "endDate": end_date_utc.strftime("%Y-%m-%d")
         }
         return jsonify(response), 200
 
@@ -1266,7 +1319,6 @@ def date_range():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
-
 
 
 
