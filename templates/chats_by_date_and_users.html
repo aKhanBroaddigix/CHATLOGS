@@ -63,6 +63,14 @@
           method="GET"
           class="d-flex justify-content-end align-items-center"
         >
+          <div class="position-relative me-2">
+            <select id="bot-type" name="bot_type" class="form-select">
+              <option value="">Select Bot Type</option>
+              <option value="General_Bot">General Bot</option>
+              <option value="Executive_Bot">Executive Bot</option>
+            </select>
+          </div>
+
           <!-- Hidden date inputs -->
           <input type="hidden" id="start_date" name="start_date" />
           <input type="hidden" id="end_date" name="end_date" />
@@ -140,7 +148,13 @@
         onclick="toggleAnswer('{{ loop.index }}')"
       >
         <div class="card-body">
-          <h5 class="card-title">Date: {{ chat.date }}</h5>
+          <div class="d-flex justify-content-left gap-4">
+            <h5 class="card-title">Date: {{ chat.date }}</h5>
+            <h5 class="card-title">Bot-type:{{chat.botname}} </h5>
+
+          </div>
+
+         
           <p class="card-text">
             <strong>Username:</strong> {{ chat.username }}
           </p>
@@ -170,26 +184,32 @@
             <!-- Previous button -->
             {% if page > 1 %}
             <li class="page-item">
-              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+              <a
+                class="page-link"
+                href="{{ url_for('get_chats_by_date_and_users', 
                 start_date=start_date, 
                 end_date=end_date, 
                 username=username, 
                 page=page-1,
-                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}"
+              >
                 Previous
               </a>
             </li>
             {% endif %}
-      
+
             <!-- First page -->
             {% if page > 3 %}
             <li class="page-item">
-              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+              <a
+                class="page-link"
+                href="{{ url_for('get_chats_by_date_and_users', 
                 start_date=start_date, 
                 end_date=end_date, 
                 username=username, 
                 page=1,
-                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}"
+              >
                 1
               </a>
             </li>
@@ -197,51 +217,59 @@
             <li class="page-item disabled">
               <span class="page-link">...</span>
             </li>
-            {% endif %}
-            {% endif %}
-      
+            {% endif %} {% endif %}
+
             <!-- Page numbers -->
-            {% for page_num in range(max(1, page-2), min(total_pages+1, page+3)) %}
+            {% for page_num in range(max(1, page-2), min(total_pages+1, page+3))
+            %}
             <li class="page-item {% if page_num == page %}active{% endif %}">
-              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+              <a
+                class="page-link"
+                href="{{ url_for('get_chats_by_date_and_users', 
                 start_date=start_date, 
                 end_date=end_date, 
                 username=username, 
                 page=page_num,
-                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}"
+              >
                 {{ page_num }}
               </a>
             </li>
             {% endfor %}
-      
+
             <!-- Last pages -->
-            {% if page < total_pages-2 %}
-            {% if page < total_pages-3 %}
+            {% if page < total_pages-2 %} {% if page < total_pages-3 %}
             <li class="page-item disabled">
               <span class="page-link">...</span>
             </li>
             {% endif %}
             <li class="page-item">
-              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+              <a
+                class="page-link"
+                href="{{ url_for('get_chats_by_date_and_users', 
                 start_date=start_date, 
                 end_date=end_date, 
                 username=username, 
                 page=total_pages,
-                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}"
+              >
                 {{ total_pages }}
               </a>
             </li>
             {% endif %}
-      
+
             <!-- Next button -->
             {% if page < total_pages %}
             <li class="page-item">
-              <a class="page-link" href="{{ url_for('get_chats_by_date_and_users', 
+              <a
+                class="page-link"
+                href="{{ url_for('get_chats_by_date_and_users', 
                 start_date=start_date, 
                 end_date=end_date, 
                 username=username, 
                 page=page+1,
-                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}">
+                ticket_generation_success='on' if request.args.get('ticket_generation_success') == 'on' else none) }}"
+              >
                 Next
               </a>
             </li>
@@ -287,8 +315,10 @@
         const startDate = getQueryParam("start_date");
         const endDate = getQueryParam("end_date");
         const username = getQueryParam("username");
-        const ticketGenerationSuccess = getQueryParam("ticket_generation_success");
-    
+        const ticketGenerationSuccess = getQueryParam(
+          "ticket_generation_success"
+        );
+
         if (startDate && endDate) {
           console.log(`Start Date: ${startDate}`);
           console.log(`End Date: ${endDate}`);
@@ -307,7 +337,17 @@
         initializeDateFilter();
         initializeUsernameFilter();
         initializeFormSubmission();
+        initializeBotTypeFilter();
       });
+      function initializeBotTypeFilter() {
+        const botTypeSelect = document.getElementById("bot-type");
+
+        botTypeSelect.addEventListener("change", function (e) {
+          const selectedBot = e.target.value;
+          // You can add any additional logic here when bot type changes
+          console.log("Selected bot type:", selectedBot);
+        });
+      }
 
       // Date filtering functionality
       function initializeDateFilter() {
@@ -512,6 +552,11 @@
 
             // Store the username in session storage
           }
+          // check the bot type
+          const botType = document.getElementById("bot-type").value;
+          if (botType) {
+            searchParams.set("bot_type", botType);
+          }
 
           // Navigate to the filtered URL with search parameters
           window.location.href = `/get-chats-by-date-and-users?${searchParams.toString()}`;
@@ -642,18 +687,21 @@
         .addEventListener("click", async () => {
           // Validate global variables for dates
 
-
-          const ticketGenerationSuccess = getQueryParam("ticket_generation_success");
+          const ticketGenerationSuccess = getQueryParam(
+            "ticket_generation_success"
+          );
+          const bot_type = getQueryParam(
+            "bot_type"
+          );
 
           // Debugging: Display the parameter in an alert
-          
+
           if (!globalStartDate || !globalEndDate) {
             window.location.href = `export-all-data`;
             showAlert("Download Complete Chat History", "success");
             //   showAlert("Please select a date range before downloading", "warning");
             return;
           }
-       
 
           console.log("Global Username:", globalUsername);
 
@@ -686,6 +734,7 @@
               endDate: globalEndDate,
               ticketGenerationSuccess: ticketGenerationSuccess === "on",
               username: username,
+              bot_type:bot_type,
               totalChats: 0, // You can update these values as needed
               totalTickets: 0,
             };
@@ -739,11 +788,6 @@
             downloadBtn.disabled = false;
           }
         });
-
-
-
-
-
     </script>
   </body>
 </html>
