@@ -510,40 +510,44 @@ def get_chats_by_date_and_users():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
-    # Get parameters with detailed logging
+    # Get parameters
     start_date = request.form.get("start_date", "") if request.method == "POST" else request.args.get("start_date", "")
     end_date = request.form.get("end_date", "") if request.method == "POST" else request.args.get("end_date", "")
     username = request.form.get("username", "") if request.method == "POST" else request.args.get("username", "")
     ticket_generation_success = request.form.get("ticket_generation_success") if request.method == "POST" else request.args.get("ticket_generation_success")
+    botname = request.form.get("bot_type", "") if request.method == "POST" else request.args.get("bot_type", "")
 
-    # Log all incoming parameters
+    # Log incoming parameters
     app.logger.info("=== Request Parameters ===")
     app.logger.info(f"Method: {request.method}")
     app.logger.info(f"start_date: {start_date}")
     app.logger.info(f"end_date: {end_date}")
     app.logger.info(f"username: {username}")
     app.logger.info(f"ticket_generation_success: {ticket_generation_success}")
+    app.logger.info(f"botname: {botname}")
     app.logger.info("=======================")
 
     try:
         page = max(1, int(request.args.get("page", 1)))
     except ValueError:
         page = 1
-        app.logger.warning(f"Invalid page parameter, defaulting to 1")
+        app.logger.warning("Invalid page parameter, defaulting to 1")
 
     items_per_page = 15
     skip_items = (page - 1) * items_per_page
 
-    # Build base query criteria
+    # Build MongoDB query criteria
     criteria = {"chats.username": {"$exists": True, "$ne": ""}}
+
+    # Apply botname filter
+    if botname:
+        criteria["chats.botname"] = botname
+        app.logger.info(f"Botname filter applied: {botname}")
 
     # Handle multiple usernames
     if username:
         usernames = [user.strip() for user in username.split(",") if user.strip()]
-        if len(usernames) > 1:
-            criteria["chats.username"] = {"$in": usernames}
-        else:
-            criteria["chats.username"] = {"$regex": f"^{usernames[0]}$", "$options": "i"}
+        criteria["chats.username"] = {"$in": usernames} if len(usernames) > 1 else {"$regex": f"^{usernames[0]}$", "$options": "i"}
 
     # Handle date filtering
     try:
@@ -565,17 +569,16 @@ def get_chats_by_date_and_users():
         flash("Invalid date format. Please use YYYY-MM-DD.")
         return redirect(url_for("get_chats_by_date_and_users"))
 
-    # Add ticket generation filter with the correct logic from the second code
+    # Apply ticket generation filter
     if ticket_generation_success == "on":
         app.logger.info("Applying ticket generation filter")
         criteria["chats.messages.content"] = {"$regex": "Ticket generated successfully!", "$options": "i"}
         criteria["chats.questions"] = {"$regex": "Yes Generate", "$options": "i"}
-        app.logger.info(f"Final MongoDB criteria with ticket filter: {criteria}")
 
-    # Log the final query criteria
+    # Log the final query
     app.logger.info(f"Final MongoDB query criteria: {criteria}")
 
-    # Get total count and handle pagination
+    # Get total chat count
     total_chats = messages_collection.count_documents(criteria)
     app.logger.info(f"Total matching documents found: {total_chats}")
 
@@ -589,7 +592,7 @@ def get_chats_by_date_and_users():
                         .sort("timestamp", -1)
                         .skip(skip_items)
                         .limit(items_per_page))
-    
+
     app.logger.info(f"Retrieved {len(all_documents)} documents after pagination")
 
     # Process chat data
@@ -599,6 +602,9 @@ def get_chats_by_date_and_users():
         chat_username = chats_data.get("username", "N/A")
         if chat_username == "N/A":
             continue
+
+        # Extract botname correctly
+        chat_botname = chats_data.get("botname", "N/A")
 
         questions = chats_data.get("questions", [])
         if isinstance(questions, str):
@@ -616,7 +622,6 @@ def get_chats_by_date_and_users():
             if message is None:
                 continue
 
-            # Use the correct ticket generation check from the second code
             if ticket_generation_success == "on":
                 if not (
                     "Ticket generated successfully!" in message.get("content", "") and
@@ -629,6 +634,7 @@ def get_chats_by_date_and_users():
                 "question": question or "No question",
                 "answer": message.get("content", "No answer"),
                 "date": formatted_date,
+                "botname": chat_botname
             })
 
     app.logger.info(f"Final number of processed chats: {len(chats)}")
@@ -643,11 +649,10 @@ def get_chats_by_date_and_users():
         total_pages=total_pages,
         max=max,
         min=min,
-        ticket_generation_success=ticket_generation_success
-    )
+        ticket_generation_success=ticket_generation_success,
+        botname=botname
+    )#downlaod csv file
 
-
-#downlaod csv file
 @app.route("/export-filtered-data", methods=["POST"])
 def export_filtered_data():
     try:
@@ -660,12 +665,16 @@ def export_filtered_data():
         end_date = data.get("endDate", "")
         username = data.get("username", "").strip()
         ticket_generation_success = data.get("ticketGenerationSuccess")
+        
+        # Simplified bot filter parameter - using only bot_type
+        botname = data.get("bot_type", "").strip()
 
         app.logger.info("=== Export Request Parameters ===")
         app.logger.info(f"start_date: {start_date}")
         app.logger.info(f"end_date: {end_date}")
         app.logger.info(f"username: {username}")
         app.logger.info(f"ticket_generation_success: {ticket_generation_success}")
+        app.logger.info(f"botname: {botname}")
         app.logger.info("===============================")
 
         # Validate required parameters
@@ -692,6 +701,11 @@ def export_filtered_data():
             "chats.username": {"$exists": True, "$ne": ""}
         }
 
+        # Apply bot filter - simplified approach from get-chats-by-date-and-users
+        if botname:
+            criteria["chats.botname"] = botname
+            app.logger.info(f"Applied bot filter for: {botname}")
+
         # Handle multiple usernames
         if username:
             usernames = [user.strip() for user in username.split(",") if user.strip()]
@@ -716,6 +730,7 @@ def export_filtered_data():
         for document in cursor:
             chats_data = document.get("chats", {})
             chat_username = chats_data.get("username", "").strip()
+            chat_botname = chats_data.get("botname", "N/A")  # Updated to match get-chats-by-date-and-users
 
             if not chat_username:
                 continue
@@ -753,8 +768,9 @@ def export_filtered_data():
                         rows.append({
                             "Date": formatted_date,
                             "Username": chat_username,
-                            "Question": question,  # Store complete question
-                            "Answer": answer_content  # Store complete answer without truncation
+                            "Bot": chat_botname,
+                            "Question": question,
+                            "Answer": answer_content
                         })
                 else:
                     # For non-ticket messages, truncate if too long
@@ -765,6 +781,7 @@ def export_filtered_data():
                     rows.append({
                         "Date": formatted_date,
                         "Username": chat_username,
+                        "Bot": chat_botname,
                         "Question": truncated_question,
                         "Answer": truncated_answer
                     })
@@ -794,6 +811,8 @@ def export_filtered_data():
     except Exception as e:
         app.logger.error(f"Error in export_filtered_data: {str(e)}", exc_info=True)
         return jsonify({"error": "An unexpected error occurred while processing your request"}), 500
+
+
 
 # home page chat-download endpoint
 @app.route("/export-filtered-data-homepage", methods=["POST"])
